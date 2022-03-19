@@ -1,0 +1,15 @@
+{
+    "default": "local",
+    "disks": {
+        "local": {
+            "type": "local",
+            "root": "D:\\WorkGroup\\RD\\thinkphp\\runtime\\storage"
+        },
+        "public": {
+            "type": "local",
+            "root": "D:\\WorkGroup\\RD\\thinkphp\\public\/storage",
+            "url": "\/storage",
+            "visibility": "public"
+        }
+    }
+}

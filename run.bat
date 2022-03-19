@@ -1,0 +1,1 @@
+php d:\workgroup\rd\thinkphp\think run

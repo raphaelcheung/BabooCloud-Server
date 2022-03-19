@@ -1,0 +1,11 @@
+{
+    "type": "php",
+    "auto_rule": 1,
+    "view_dir_name": "view",
+    "view_suffix": "php",
+    "view_depr": "\\",
+    "tpl_begin": "{",
+    "tpl_end": "}",
+    "taglib_begin": "{",
+    "taglib_end": "}"
+}

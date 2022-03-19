@@ -1,0 +1,17 @@
+{
+    "isinited": "1",
+    "default_quota": "2T",
+    "version": [
+        0,
+        0,
+        79
+    ],
+    "secret": "30xI0K#B&ZmNnI&c<~EtK|b~]DI`,]yt&\\C-+\\p&Aq3P2,bd",
+    "salt": "}.Vb=^c*,Ce(B9=wwLSn3Ac=av;).-R.",
+    "datapath": "e:\/data\/",
+    "base": {
+        "name": "\u5df4\u5e03\u4e91",
+        "title": "BabooCloud",
+        "slogan": "\u60a8\u7684\u79c1\u6709\u8d44\u6e90\u7ba1\u7406\u4e13\u5bb6"
+    }
+}
