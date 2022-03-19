@@ -1,39 +1,43 @@
 # BabooCloud-Server
 
 #### 介绍
-{**以下是 Gitee 平台说明，您可以替换此简介**
-Gitee 是 OSCHINA 推出的基于 Git 的代码托管平台（同时支持 SVN）。专为开发者提供稳定、高效、安全的云端软件开发协作平台
-无论是个人、团队、或是企业，都能够用 Gitee 实现代码托管、项目管理、协作开发。企业项目请看 [https://gitee.com/enterprises](https://gitee.com/enterprises)}
+
+BabooCloud 是基于 owncloud前端交互开发的私有云网盘。
+
+前端引用了owncloud的交互和资源，后端在thinkphp6架构上进行全新设计，为大家提供最为精简的私有云盘功能。
+
+服务器将会支持windows和linux，前端将会支持web、ios、android、pc客户端，项目才刚开始，开发量不小，欢迎同道人士参与
 
 #### 软件架构
-软件架构说明
 
+之前没有写web系统的经验，一边摸索一边写，先把功能实现了，以后再提升代码质量
+
+1. 阅读代码前，你需要了解 [thinkphp6的架构](https://www.thinkphp.cn/)
+1. 环境要求 php 7.4+，mysql 5.7+，服务器的运行环境目前只在win10下跑过，还没去linux验证
+1. app\controller\ 控制器在此，处理外部请求
+1. app\middleware\ 中间件处理免登录的身份验证，以及首次安装的跳转
+1. app\lib\ 核心库在此
+1. config\ 配置文件都在这，原来的thinkphp6不支持配置动态写入，修改了框架让其可以读写json配置
+
+#### 已实现的功能点
+
+1. 首次运行会进入安装页面，引导配置超级管理员账号、设置存储目录、数据库连接信息，要注意的是，数据库仅支持mysql/MariaDB
+1. 安装过后会跳转到登录页面，登录一次可记住7天
 
 #### 安装教程
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+1.  待添加
 
 #### 使用说明
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+1.  待添加
 
 #### 参与贡献
 
-1.  Fork 本仓库
-2.  新建 Feat_xxx 分支
-3.  提交代码
-4.  新建 Pull Request
+1.  Raphael Cheung，拥有多年的C++客户端、C#后端经验，现为项目的发起人和主要开发人
 
 
-#### 特技
+#### 引用申明
 
-1.  使用 Readme\_XXX.md 来支持不同的语言，例如 Readme\_en.md, Readme\_zh.md
-2.  Gitee 官方博客 [blog.gitee.com](https://blog.gitee.com)
-3.  你可以 [https://gitee.com/explore](https://gitee.com/explore) 这个地址来了解 Gitee 上的优秀开源项目
-4.  [GVP](https://gitee.com/gvp) 全称是 Gitee 最有价值开源项目，是综合评定出的优秀开源项目
-5.  Gitee 官方提供的使用手册 [https://gitee.com/help](https://gitee.com/help)
-6.  Gitee 封面人物是一档用来展示 Gitee 会员风采的栏目 [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+1.  AGPL，[owncloud](https://github.com/owncloud)：前端引用了owncloud的交互和资源并做了大量的修改
+1.	Apache,[thinkphp6](https://www.thinkphp.cn/)：后端基于thinkphp6的框架进行全新设计
