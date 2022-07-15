@@ -46,7 +46,7 @@
         id: 'files',
         appName: '文件',
         isEmpty: true,
-        useUndo:true,
+        useUndo: true,
 
         /**
          * Top-level container with controls and file list
@@ -216,6 +216,8 @@
          * @private
          */
         initialize: function($el, options) {
+            //console.log('FileList: inited');
+
             var self = this;
             options = options || {};
             if (this.initialized) {
@@ -1502,6 +1504,7 @@
             var currentDir = this.getCurrentDirectory();
             targetDir = targetDir || '/';
 
+            //this.trace(10);
             return new Promise(function(resolve, reject) {
 
                 if (!force && currentDir === targetDir) {
@@ -1670,7 +1673,7 @@
                 var deferred = $.Deferred();
                 var promise = deferred.promise();
                 this._reloadCall = promise;
-                console.log(OC.filePath('file/findfolder') + '?path=' + encodeURIComponent(this.getCurrentDirectory()));
+                //console.log(OC.filePath('file/findfolder') + '?path=' + encodeURIComponent(this.getCurrentDirectory()));
                 $.ajax({
                     url: OC.filePath('file/findfolder') + '?path=' + encodeURIComponent(this.getCurrentDirectory()),
                     data: {},
@@ -1680,8 +1683,8 @@
                     async: true,
                     cache: false,
                     success: function(data, result, response){
-                        console.log('file/findfolder suc!');
-                        console.log(data);
+                        //console.log('file/findfolder suc!');
+                        //console.log(data);
                         deferred.resolve(data, result, response);
                     },
                     error: function(data, result){
@@ -1947,6 +1950,20 @@
                 });
             });
         },
+
+        trace:  function(count) {
+            var caller = arguments.callee.caller;
+            var i = 0;
+            count = count || 10;
+            //console.log("***----------------------------------------  ** " + (i + 1));
+            while (caller && i < count) {
+                console.log(caller.toString());
+                caller = caller.caller;
+                i++;
+                //console.log("***---------------------------------------- ** " + (i + 1));
+            }
+        },
+
 
         _setShareTreeLinkView: function() {
             var self  = this;

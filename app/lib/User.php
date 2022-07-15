@@ -2,8 +2,10 @@
 namespace app\lib;
 
 use app\model\Account;
+use app\model\Task;
 use app\lib\DebugException;
 use app\lib\DisplayException;
+use think\facade\Log;
 
 class User
 {
@@ -19,6 +21,17 @@ class User
         'permissions' => DbSystem::PERMISSION_ALL,
         'parent_path' => '',
         'mimetype'  => 'dir',
+    ];
+
+    protected const TASKRESULT_TEMPLATE = [
+        'id' => 0,
+        'title' => '',
+
+        'from'  => '',
+        'target' => '',
+        'total' => 1,
+        'value' => 0,
+        'state' => 0,
     ];
 
     protected $Account;
@@ -172,5 +185,149 @@ class User
     public function deleteFile($filename)
     {
         DbSystem::deleteFile($this->Account->uid, $filename);
+    }
+
+    public function getDownloadList($page)
+    {
+        $results = [];
+        $tasks = DbSystem::getTaskList($this->Account->uid, 1, $page);
+
+        if (isset($tasks)){
+            foreach($tasks as $task){
+                $results[] = array_merge(self::TASKRESULT_TEMPLATE, [
+                    'id' => $task->task_id,
+                    'title' => $task->task_display_text,
+                    'from' => $task->task_from_path,
+                    'target' => $task->task_target_path,
+                    'total' => $task->task_total,
+                    'value' => $task->task_value,
+                    'state' => $task->task_state,
+                ]);
+            }
+        }
+
+        if ($page == 0){
+            $results[] = [                    
+                'id' => 2,
+                'title' => '我切封杀了.txt',
+                'from' => '/sadfsdf/',
+                'target' => '/拉萨的会计分录/123/asdfl',
+                'total' => 50,
+                'value' => 0,
+                'state' => 0,
+            ];
+
+            $results[] = [                    
+                'id' => 2,
+                'title' => 'sdfsdaf起來.1234abcd',
+                'from' => '/我卻認爲共分爲日期/12342314/asdfsdf',
+                'target' => '/拉萨的会计分录/123/皮尅林',
+                'total' => 50,
+                'value' => 0,
+                'state' => 0,
+            ];
+        }
+
+        return $results;
+    }
+
+    public function getUploadList($page)
+    {
+        $results = [];
+        $tasks = DbSystem::getTaskList($this->Account->uid, 0, $page);
+
+        if (isset($tasks)){
+            foreach($tasks as $task){
+                $results[] = array_merge(self::TASKRESULT_TEMPLATE, [
+                    'id' => $task->task_id,
+                    'title' => $task->task_display_text,
+                    'from' => $task->task_from_path,
+                    'target' => $task->task_target_path,
+                    'total' => $task->task_total,
+                    'value' => $task->task_value,
+                    'state' => $task->task_state,
+                ]);
+            }
+        }
+
+        if ($page == 0){
+            $results[] = [                    
+                'id' => 1,
+                'title' => 'sadfsdakjg;lsajkdfg.txt',
+                'from' => '/sadfsdf/',
+                'target' => '/拉萨的会计分录/123/asdfl',
+                'total' => 50,
+                'value' => 0,
+                'state' => 0,
+            ];
+
+            $results[] = [                    
+                'id' => 2,
+                'title' => '了破i九五七二问题.1234abcd',
+                'from' => '/我卻認爲共分爲日期/12342314/asdfsdf',
+                'target' => '/拉萨的会计分录/123/皮尅林',
+                'total' => 50,
+                'value' => 0,
+                'state' => 0,
+            ];
+
+            $results[] = [                    
+                'id' => 3,
+                'title' => '2345312542134234234.1234abcd',
+                'from' => '/1234231523153215/12342314/asdfsdf',
+                'target' => '/124342134231423142314/123/皮尅林',
+                'total' => 50,
+                'value' => 0,
+                'state' => 0,
+            ];
+        }
+
+        return $results;
+    }
+
+    public function appendDownTask($from, $target, $hash)
+    {
+        if (!DbSystem::checkDownListTask($this->Account->uid, $from, $target, $hash)){
+            return '任务已存在';
+        }
+
+        $task = new Task();
+        $task->task_type = 1;
+        $task->task_display_text = '';
+        $task->task_from_path = $from;
+        $task->task_target_path = $target;
+        $task->task_owner = $this->Account->uid;
+        $task->task_total = 0;
+        $task->task_value = 0;
+        $task->task_state = 0;
+
+        try {
+            $task->save();
+            return true;
+        } catch(Exception $e) {
+            Log::record('添加下载任务异常，uid:'.$this->Account->uid.'，from:'.$from.'，target:'.$target.'，hash:'.$hash, 'warnning', 'User::appendDownTask');
+            Log::record($e->getMessage(), 'warnning', 'User::appendDownTask');
+            return '添加任务异常';
+        }
+    }
+
+    public function appendDownTaskList($list)
+    {
+        $has_exception = false;
+        foreach($list as $task){
+            if (isset($task['from'])
+                && isset($task['target'])
+                && isset($task['hash'])) {
+
+                $result = $this->appendDownTask($task['from'], $task['target'], $task['hash']);
+                if ($result != true) {
+                    $has_exception = true;
+                }
+            } else {
+                $has_exception = true;
+            }
+        }
+
+        return $has_exception == true ? '部分任务添加失败' : true;
     }
 }

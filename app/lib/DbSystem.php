@@ -3,6 +3,7 @@ namespace app\lib;
 
 use app\model\Folder;
 use app\model\File;
+use app\model\Task;
 use app\lib\DebugException;
 use app\lib\DisplayException;
 use \think\facade\Db;
@@ -178,5 +179,31 @@ class DbSystem
         $folder->save();
 
         return $folder;
+    }
+
+    public static function getTaskList($uid, $type, $page)
+    {
+        return Task::where([
+            'task_owner' => $uid,
+            'task_type'  => $type,
+        ])->page($page, 20)->select();
+    }
+
+    public static function getTask($id)
+    {
+        return Task::find($id);
+    }
+
+    public static function checkDownListTask($uid, $from, $target, $hash)
+    {
+        $result = Task::where([
+            'task_owner' => $uid,
+            'task_type'  => 1,
+            'task_from_path' => $from,
+            'task_target_path' => $target,
+            'task_hash' => $hash,
+        ])->find();
+
+        return $result == null;
     }
 }

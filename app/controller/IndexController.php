@@ -43,7 +43,8 @@ class IndexController extends BaseController
             "files/files.css",
             "files/upload.css",
             "files/mobile.css",
-            "files/detailsView.css",                
+            "files/detailsView.css",    
+            "webuploader.css",            
         ];
 
         $jsfiles = [
@@ -121,6 +122,10 @@ class IndexController extends BaseController
             "files/files.js",
             "files/keyboardshortcuts.js",
             "files/navigation.js", 
+
+            "files/taskdownlist.js",
+            "files/taskuplist.js",
+            "webuploader/webuploader.js"
         ];
 
 

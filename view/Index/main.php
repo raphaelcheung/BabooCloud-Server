@@ -5,9 +5,22 @@
                 全部文件
             </a>
         </li>
-        <li data-id="favorites" class="nav-favorites active">
+
+        <li data-id="favorites" class="nav-favorites">
             <a href="#" class="nav-icon-favorites svg">
                 收藏
+            </a>
+        </li>
+
+        <li data-id="uptasks" class="nav-favorites">
+            <a href="#" class="nav-icon-tasks svg">
+                上传
+            </a>
+        </li>
+
+        <li data-id="downtasks" class="nav-favorites">
+            <a href="#" class="nav-icon-tasks svg">
+                下载
             </a>
         </li>
     </ul>
@@ -123,6 +136,127 @@
         </div>
 
     </div>
+
+    <div id="app-content-favorites" class="hidden viewcontainer">
+        <div id='notification'></div>
+
+        <div id="emptycontent" class="hidden">
+            <div class="icon-starred"></div>
+            <h2>收藏夹是空的</h2>
+            <p>添加到收藏夹的文件和文件夹都会在这里显示</p>
+        </div>
+
+        <input type="hidden" name="dir" value="" id="dir">
+
+        <div class="nofilterresults hidden">
+            <div class="icon-search"></div>
+            <h2>空空如也</h2>
+            <p></p>
+        </div>
+
+        <table id="filestable">
+            <thead>
+                <tr>
+                    <th id='headerName' class="hidden column-name">
+                        <div id="headerName-container">
+                            <a class="name sort columntitle" data-sort="name"><span>名称</span><span class="sort-indicator"></span></a>
+                        </div>
+                    </th>
+                    <th id="headerSize" class="hidden column-size">
+                        <a class="size sort columntitle" data-sort="size"><span>大小</span><span class="sort-indicator"></span></a>
+                    </th>
+                    <th id="headerDate" class="hidden column-mtime">
+                        <a id="modified" class="columntitle" data-sort="mtime"><span>修改时间</span><span class="sort-indicator"></span></a>
+                            <span class="selectedActions"><a href="" class="delete-selected">
+                                删除
+                                <img class="svg" alt="删除"
+                                    src="<?php echo app\lib\Base::getImagePath('actions/delete.svg'); ?>" />
+                            </a></span>
+                    </th>
+                </tr>
+            </thead>
+            <tbody id="fileList">
+            </tbody>
+            <tfoot>
+            </tfoot>
+        </table>
+    </div>
+
+    <div id="app-content-downtasks" class="hidden viewcontainer">
+        <div id='notification'></div>
+
+        <div id="emptycontent" class="hidden">
+            <div class="icon-starred"></div>
+            <h2>当前没有下载任务喔~</h2>
+            <p>所有的下载任务都会在这里</p>
+        </div>
+
+        <div class="nofilterresults hidden">
+            <div class="icon-search"></div>
+            <h2>空空如也</h2>
+            <p></p>
+        </div>
+
+        <table id="taskdownloadtable">
+            <thead>
+                <tr>
+                    <th id='headerDes' class=" column-name">
+                        <a class="size sort columntitle" data-sort="size"><span>任务描述</span></a>
+                    </th>
+                    <th id="headerProgress" class=" column-size">
+                        <a class="size sort columntitle" data-sort="size"><span>进度</span></a>
+                    </th>
+                    <th id="headerAction" class=" column-mtime">
+                        <a class="size sort columntitle" data-sort="size"><span>操作</span></a>
+                    </th>
+                </tr>
+            </thead>
+            <tbody id="downTaskList">
+            </tbody>
+            <tfoot>
+            </tfoot>
+        </table>
+
+    </div>
+
+
+    <div id="app-content-uptasks" class="hidden viewcontainer">
+        <div id='notification'></div>
+
+        <div id="emptycontent" class="hidden">
+            <div class="icon-starred"></div>
+            <h2>当前没有下载任务喔~</h2>
+            <p>所有的下载任务都会在这里</p>
+        </div>
+
+        <div class="nofilterresults hidden">
+            <div class="icon-search"></div>
+            <h2>空空如也</h2>
+            <p></p>
+        </div>
+
+        <table id="taskuploadtable">
+            <thead>
+                <tr>
+                    <th id='headerDes' class=" column-name">
+                        <a class="size sort columntitle" data-sort="size"><span>任务描述</span></a>
+                    </th>
+                    <th id="headerProgress" class=" column-size">
+                        <a class="size sort columntitle" data-sort="size"><span>进度</span></a>
+                    </th>
+                    <th id="headerAction" class=" column-mtime">
+                        <a class="size sort columntitle" data-sort="size"><span>操作</span></a>
+                    </th>
+                </tr>
+            </thead>
+            <tbody id="upTaskList">
+            </tbody>
+            <tfoot>
+            </tfoot>
+        </table>
+
+    </div>
+
 
     <div id="searchresults" class="hidden"></div>
 </div><!-- closing app-content -->

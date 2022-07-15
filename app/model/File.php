@@ -7,10 +7,7 @@ use think\Model;
 class File extends Model
 {
     // 设置当前模型对应的完整数据表名称
-    protected $table = 'mc_admin_files';
-    
-    // 设置当前模型的数据库连接
-    //protected $connection = 'db_config';
+    protected $table = 'mc_files';
 
     protected $readonly = ['file_id'];
 

@@ -323,6 +323,10 @@ img.icon-loading-small-dark, object.icon-loading-small-dark, video.icon-loading-
 	background-image: url('../img/actions/sound-off.svg');
 }
 
+.icon-folder {
+	background-image: url('../img/filetypes/folder-drag-accept.svg');
+}
+
 .icon-star,
 .icon-starred:hover,
 .icon-starred:focus {

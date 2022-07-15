@@ -183,6 +183,13 @@ a.two-factor-cancel {
 	overflow-x: auto;
 }
 
+#maincontent,
+.maincontent {
+	color: #888;
+	margin-top: 30vh;
+	width: 100%;
+}
+
 #emptycontent,
 .emptycontent {
 	color: #888;

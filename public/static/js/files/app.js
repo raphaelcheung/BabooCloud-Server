@@ -40,6 +40,9 @@
 		 */
 		fileList: null,
 
+		taskDownList: null,
+		taskUpList: null,
+
 		/**
 		 * Backbone model for storing files preferences
 		 */
@@ -100,6 +103,31 @@
 					uploadStallRetries: OC.appConfig.files && OC.appConfig.files.upload_stall_retries
 				}
 			);
+
+			this.taskDownList = new OCA.Files.TaskDownList(
+				$('#app-content-downtasks'), {
+					scrollContainer: $('#app-content'),
+
+					scrollTo: urlParams.scrollto,
+					detailTabId: urlParams.details,
+
+					enableUpload: true,
+
+				}
+			);
+
+			this.taskUpList = new OCA.Files.TaskUpList(
+				$('#app-content-uptasks'), {
+					scrollContainer: $('#app-content'),
+
+					scrollTo: urlParams.scrollto,
+					detailTabId: urlParams.details,
+
+					enableUpload: true,
+
+				}
+			);
+
 			this.files.initialize();
 
 			// for backward compatibility, the global FileList will
@@ -122,6 +150,10 @@
 			this.navigation = null;
 			this.fileList.destroy();
 			this.fileList = null;
+			this.taskDownList.destroy();
+			this.taskDownList = null;
+			this.taskUpList.destroy();
+			this.taskUpList = null;
 			this.files = null;
 			OCA.Files.fileActions.off('setDefault.app-files', this._onActionsUpdated);
 			OCA.Files.fileActions.off('registerAction.app-files', this._onActionsUpdated);
@@ -225,6 +257,7 @@
 				};
 				this._changeUrl(params.view, params.dir);
 				OC.Apps.hideAppSidebar($('.detailsView'));
+
 				this.navigation.getActiveContainer().trigger(new $.Event('urlChanged', params));
 			}
 		},
@@ -277,6 +310,7 @@
 			if (lastId !== this.navigation.getActiveItem()) {
 				this.navigation.getActiveContainer().trigger(new $.Event('show'));
 			}
+
 			this.navigation.getActiveContainer().trigger(new $.Event('urlChanged', params));
 		},
 

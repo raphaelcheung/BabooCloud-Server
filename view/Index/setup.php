@@ -64,9 +64,9 @@
 		<div id="selectDbType">
 		<input type="radio" name="dbtype" value="mysql" id="mysql" checked="checked"/>
 		<label class="mysql" for="mysql"><?php echo $database['name']; ?></label>
+
 		</div>
 	</fieldset>
-
 
 	<fieldset id='databaseField'>
 		<div id="use_other_db">
