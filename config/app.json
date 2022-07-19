@@ -7,7 +7,7 @@
     "app_map": [],
     "domain_bind": [],
     "deny_app_list": [],
-    "exception_tmpl": "D:\\WorkGroup\\RD\\thinkphp\\vendor\\topthink\\framework\\src\\tpl\/think_exception.tpl",
+    "exception_tmpl": "D:\\WorkGroup\\RD\\BabooCloud-Server\\vendor\\topthink\\framework\\src\\tpl\/think_exception.tpl",
     "error_message": "\u9875\u9762\u9519\u8bef\uff01\u8bf7\u7a0d\u540e\u518d\u8bd5\uff5e",
     "show_error_msg": false
 }

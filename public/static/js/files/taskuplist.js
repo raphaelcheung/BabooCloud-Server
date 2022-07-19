@@ -12,6 +12,8 @@
         isEmpty: true,
         useUndo: false,
 
+        _uploader: null,
+
         $tasks: [],
 
 		$el: null,
@@ -53,6 +55,7 @@
 		initialize: function($el, options) {
             console.log('taskup: inited');
 			var self = this;
+            this._uploader = OC.UploaderInstance;
 			options = options || {};
 			if (this.initialized) {
 				return;
@@ -344,50 +347,24 @@
         },
 
         loadNextPage: function(){
-            this.showMask();
+            //this.showMask();
             var self = this;
 
             var index = this.$indexLastPage + 1;
 
-            console.log("1");
-            try{
-                $.ajax({
-                    url: OC.filePath('task/getuploadlist') + '?page=' + index,
-                    data: {},
-                    type: "GET",
-                    datatype: "json",
-                    headers: {logintoken: cloud_token},
-                    async: true,
-                    cache: false,
-                    success: function(data, result, response){
-                        console.log('task/getuploadlist suc!');
-                        console.log(data);
-                        console.log(data.length);
-                        console.log(index);
+            var datas = this._uploader.getUploads(index * 20, (index + 1) * 20);
+            
+            console.log('loadNextPage: ' + index);
+            console.log(datas);
 
-                        self.hideMask();
+            if (datas.length > 0){
+                self.$indexLastPage = index;
 
-                        if (data.length > 0){
-                            if (index == 0){
-                                self.setTasks(data);
-                            }else{
-                                self.addTasks(data);
-                            }
-    
-                            self.$indexLastPage = index;
-                        }
-                    },
-                    error: function(data, result){
-                        console.log('task/getuploadlist failed...');
-                        console.log(data);
-
-                        self.hideMask();
-                        OC.Notification.show('拉取任务列表失败：' + datas.responseJSON, {type: 'error'});
-                    },
-                });
-            }catch(e){
-                console.error(e);
-                OC.Notification.show('无法获取任务列表，page：' + index , {timeout: 7, type: 'error'});
+                if (index == 0){
+                    self.setTasks(datas);
+                }else{
+                    self.addTasks(datas);
+                }
             }
         },
 

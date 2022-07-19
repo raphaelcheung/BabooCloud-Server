@@ -101,8 +101,12 @@
 	background-image: url("../../img/star.svg");
 }
 
-.nav-icon-tasks {
-	background-image: url("../../img/activity-dark.svg");
+.nav-icon-downtasks {
+	background-image: url("../../img/actions/download.svg");
+}
+
+.nav-icon-uptasks {
+	background-image: url("../../img/actions/upload.svg");
 }
 
 .nav-icon-sharingin,

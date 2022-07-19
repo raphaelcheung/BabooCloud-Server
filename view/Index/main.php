@@ -8,19 +8,19 @@
 
         <li data-id="favorites" class="nav-favorites">
             <a href="#" class="nav-icon-favorites svg">
-                收藏
+                收藏夹
             </a>
         </li>
 
         <li data-id="uptasks" class="nav-favorites">
-            <a href="#" class="nav-icon-tasks svg">
-                上传
+            <a href="#" class="nav-icon-uptasks svg">
+                上传任务
             </a>
         </li>
 
         <li data-id="downtasks" class="nav-favorites">
-            <a href="#" class="nav-icon-tasks svg">
-                下载
+            <a href="#" class="nav-icon-downtasks svg">
+                下载任务
             </a>
         </li>
     </ul>
@@ -126,7 +126,7 @@
         </table>
         <input type="hidden" name="dir" id="dir" value="" />
         <div class="hiddenuploadfield">
-            <input type="file" id="file_upload_start" class="hiddenuploadfield" name="files[]" />
+            <input type="file" id="file_upload_start" class="hiddenuploadfield" name="files[]" multiple="multiple"/>
         </div>
         <div id="editor"></div><!-- FIXME Do not use this div in your app! It is deprecated and will be removed in the future! -->
         <div id="uploadsize-message" title="上传文件太大">
@@ -226,7 +226,7 @@
         <div id="emptycontent" class="hidden">
             <div class="icon-starred"></div>
             <h2>当前没有下载任务喔~</h2>
-            <p>所有的下载任务都会在这里</p>
+            <p>所有的下载任务都会在这里</p> 
         </div>
 
         <div class="nofilterresults hidden">

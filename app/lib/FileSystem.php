@@ -10,6 +10,9 @@ use app\lib\DisplayException;
 
 class FileSystem
 {
+    public const UPLOAD_PATH = "../../runtime/upload";
+
+
     public static function createRootFolder($uid)
     {
         $root_path = Config::get('mycloud.datapath');
@@ -128,5 +131,10 @@ class FileSystem
         if (!mkdir($root_path . $path)){
             throw new DisplayException(400, '没有在该路径下创建文件夹的权限');
         }
+    }
+
+    public static function initUploadFolder($uid)
+    {
+
     }
 }

@@ -9,6 +9,11 @@ use think\facade\Log;
 
 class User
 {
+    private const TASK_STATE_INITED = 0;
+    private const TASK_STATE_PROCESSING = 1;
+    private const TASK_STATE_COMPLETED = 2;
+
+
     protected const FILERESULT_TEMPLATE = [
         'name' => '',
         'ext' => '',
@@ -285,7 +290,7 @@ class User
         return $results;
     }
 
-    public function appendDownTask($from, $target, $hash)
+    /*public function appendDownTask($from, $target, $hash)
     {
         if (!DbSystem::checkDownListTask($this->Account->uid, $from, $target, $hash)){
             return '任务已存在';
@@ -309,7 +314,7 @@ class User
             Log::record($e->getMessage(), 'warnning', 'User::appendDownTask');
             return '添加任务异常';
         }
-    }
+    }*/
 
     public function appendDownTaskList($list)
     {
@@ -329,5 +334,34 @@ class User
         }
 
         return $has_exception == true ? '部分任务添加失败' : true;
+    }
+
+    public function appendUploadTask($params)
+    {
+        $task = DbSystem::findTaskDb([
+            'task_owner' => $this->Account->uid,
+            'task_type' => 0,
+            'task_client_id' => $params['task_client_id'],
+        ]);
+
+        if ($task == null) {
+            $task = new Task();
+            $task->task_type = 0;
+            $task->task_from_path = $params['task_from_path'];
+            $task->task_target_path = $params['task_target_path'];
+            $task->task_owner = $this->Account->uid;
+            $task->task_state = self::TASK_STATE_INITED;
+            $task->task_create_time = time();
+            $task->task_file_hash = $params['task_file_hash'];
+            $task->task_client_id = $params['task_client_id'];
+
+            try {
+                $task->save();
+            } catch(Exception $e) {
+                Log::record('添加上传任务异常，uid:'.$this->Account->uid.'，from:'.$from.'，target:'.$target.'，hash:'.$hash, 'warnning', 'User::appendDownTask');
+                Log::record($e->getMessage(), 'warnning', 'User::appendDownTask');
+                return '添加任务异常';
+            }
+        }
     }
 }

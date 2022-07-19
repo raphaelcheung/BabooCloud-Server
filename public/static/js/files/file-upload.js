@@ -31,18 +31,24 @@
  * @param {OC.Uploader} uploader uploader
  * @param {Object} data blueimp data
  */
-OC.FileUpload = function(uploader, data) {
-	this.uploader = uploader;
-	this.data = data;
-	if (!data) {
-		throw 'Missing "data" argument in OC.FileUpload constructor';
+OC.FileUpload = function(uploader, file, targetpath, originalpath) {
+	if (!file || !uploader) {
+		throw 'OC.FileUpload 初始化失败，参数不能为空';
 	}
-	var basePath = '';
-	if (this.uploader.fileList) {
-		basePath = this.uploader.fileList.getCurrentDirectory();
-	}
-	var path = OC.joinPaths(basePath, this.getFile().relativePath || '', this.getFile().name);
-	this.id = 'web-file-upload-' + md5(path) + '-' + (new Date()).getTime();
+
+	this._uploader = uploader;
+	this._file = file;
+
+	this._targetFolder = targetpath;
+	this._originalFullPath = originalpath;
+
+	var path = OC.joinPaths(this._targetFolder, this.getFile().name);
+	this._targetFullPath = path;
+	//console.log('_originalFullPath: ' + this._originalFullPath);
+	//console.log('_targetFullPath: ' + this._targetFolder);
+	//console.log('_targetFullPath: ' + path);
+
+	this.id = md5(this.getFile().__hash + '-' + path + '-' + (new Date()).getTime());
 };
 OC.FileUpload.CONFLICT_MODE_DETECT = 0;
 OC.FileUpload.CONFLICT_MODE_OVERWRITE = 1;
@@ -64,12 +70,12 @@ OC.FileUpload.prototype = {
 	 */
 	$uploadEl: null,
 
-	/**
-	 * Target folder
-	 *
-	 * @type string
-	 */
+	_md5: null,
+	_uploader: null,
+	_originalFullPath: '',
 	_targetFolder: '',
+	_targetFullPath: '',
+	_file: null,
 
 	/**
 	 * @type int
@@ -92,13 +98,29 @@ OC.FileUpload.prototype = {
 		return this.id;
 	},
 
+	getMD5: function(){
+		return this._md5;
+	},
+
+	setMD5: function(md5){
+		this._md5 = md5;
+	},
+
 	/**
 	 * Returns the file to be uploaded
 	 *
 	 * @return {File} file
 	 */
 	getFile: function() {
-		return this.data.files[0];
+		return this._file;
+	},
+
+	getOriginalFullPath: function() {
+		return this._originalFullPath;
+	},
+
+	getTargetFullPath: function() {
+		return this._targetFullPath;
 	},
 
 	/**
@@ -156,10 +178,6 @@ OC.FileUpload.prototype = {
 		return null;
 	},
 
-	setTargetFolder: function(targetFolder) {
-		this._targetFolder = targetFolder;
-	},
-
 	getTargetFolder: function() {
 		return this._targetFolder;
 	},
@@ -201,13 +219,11 @@ OC.FileUpload.prototype = {
 	 * @return {bool}
 	 */
 	isPending: function() {
-		if (!this.data || !this.data.state) {
-			// this should not be possible!
-			var stack = new Error().stack;
-			console.error(stack);
-			return false;
-		}
-		return this.data.state() === 'pending';
+		return this._file.Status === 'inited' || this._file.Status === 'queued';
+	},
+
+	isPause: function() {
+		return this._file.Status === 'interrupt';
 	},
 
 	deleteUpload: function() {
@@ -243,91 +259,7 @@ OC.FileUpload.prototype = {
 	 */
 	submit: function() {
 		var self = this;
-		var data = this.data;
-		var file = this.getFile();
 
-		/**
-		 * If the variable file is a directory, we just create it and return.
-		 * Files being handled separately
-		 */
-		if (file.isDirectory){
-			return this.uploader.ensureFolderExists(OC.joinPaths(this._targetFolder, this.sanitizePath(file.fullPath)));
-		}
-
-		// it was a folder upload, so make sure the parent directory exists already
-		var folderPromise;
-		if (file.relativePath) {
-			folderPromise = this.uploader.ensureFolderExists(this.getFullPath());
-		} else {
-			folderPromise = $.Deferred().resolve().promise();
-		}
-
-		if (this.uploader.url) {
-			if (_.isFunction(this.uploader.url)) {
-				this.data.url = this.uploader.url(this.getFileName(), this.getFullPath());
-			} else {
-				this.data.url = this.uploader.url;
-			}
-		} else if (this.uploader.fileList) {
-			this.data.url = this.uploader.fileList.getUploadUrl(this.getFileName(), this.getFullPath());
-		}
-
-		if (!this.data.headers) {
-			this.data.headers = {};
-		}
-
-		// webdav without multipart
-		this.data.multipart = false;
-		this.data.type = 'PUT';
-
-		delete this.data.headers['If-None-Match'];
-		if (this._conflictMode === OC.FileUpload.CONFLICT_MODE_DETECT
-			|| this._conflictMode === OC.FileUpload.CONFLICT_MODE_AUTORENAME) {
-			this.data.headers['If-None-Match'] = '*';
-		}
-		if (this._conflictMode === OC.FileUpload.CONFLICT_MODE_AUTORENAME_SERVER) {
-			// server-side autorename (not supported on all endpoints)
-			this.data.headers['OC-Autorename'] = '1';
-		}
-
-		var lastModified = this.getLastModified();
-		if (lastModified) {
-			// preserve timestamp
-			this.data.headers['X-OC-Mtime'] = '' + lastModified;
-		}
-
-		var userName = this.uploader.davClient.getUserName();
-		var password = this.uploader.davClient.getPassword();
-		if (userName) {
-			// copy username/password from DAV client
-			this.data.headers['Authorization'] =
-				'Basic ' + btoa(userName + ':' + (password || ''));
-		}
-		this.data.headers['requesttoken'] = OC.requestToken;
-
-		// prevent global error handler to kick in on timeout
-		this.data.allowAuthErrors = true;
-
-		var chunkFolderPromise;
-		if ($.support.blobSlice
-			&& this.uploader.fileUploadParam.maxChunkSize
-			&& this.getFile().size > this.uploader.fileUploadParam.maxChunkSize
-		) {
-			data.isChunked = true;
-			chunkFolderPromise = this.uploader.davClient.createDirectory(
-				'uploads/' + OC.getCurrentUser().uid + '/' + this.getId()
-			);
-			// TODO: if fails, it means same id already existed, need to retry
-		} else {
-			chunkFolderPromise = $.Deferred().resolve().promise();
-		}
-
-		// wait for creation of the required directory before uploading
-		$.when(folderPromise, chunkFolderPromise).then(function() {
-			data.submit();
-		}, function() {
-			self.abort();
-		});
 
 	},
 
@@ -335,9 +267,6 @@ OC.FileUpload.prototype = {
 	 * Process end of transfer
 	 */
 	done: function() {
-		if (!this.data.isChunked) {
-			return $.Deferred().resolve().promise();
-		}
 
 		var uid = OC.getCurrentUser().uid;
 		var mtime = this.getLastModified();
@@ -394,21 +323,27 @@ OC.FileUpload.prototype = {
 
 	_deleteChunkFolder: function() {
 		// delete transfer directory for this upload
-		this.uploader.davClient.remove(
-			'uploads/' + OC.getCurrentUser().uid + '/' + this.getId()
-		);
+
 	},
 
 	/**
 	 * Abort the upload
 	 */
 	abort: function() {
-		if (this.data.isChunked) {
-			this._deleteChunkFolder();
-		}
-		this.data.stalled = false;
-		this.data.abort();
+
 		this.deleteUpload();
+	},
+
+	pause: function() {
+		this._uploader.pauseUpload(this._file);
+	},
+
+	upload: function() {
+		this._uploader.startUpload(this._file);
+	},
+
+	cancel: function() {
+
 	},
 
 	/**
@@ -450,14 +385,14 @@ OC.FileUpload.prototype = {
 			// attempt parsing Sabre exception is available
 			var xml = response.jqXHR.responseXML;
 			if (xml.documentElement.localName === 'error' && xml.documentElement.namespaceURI === 'DAV:') {
-				var messages = xml.getElementsByTagNameNS('http://sabredav.org/ns', 'message');
+				/*var messages = xml.getElementsByTagNameNS('http://sabredav.org/ns', 'message');
 				var exceptions = xml.getElementsByTagNameNS('http://sabredav.org/ns', 'exception');
 				if (messages.length) {
 					response.message = messages[0].textContent;
 				}
 				if (exceptions.length) {
 					response.exception = exceptions[0].textContent;
-				}
+				}*/
 				return response;
 			}
 		}
@@ -467,7 +402,7 @@ OC.FileUpload.prototype = {
 			response = $.parseJSON(response.result[0].body.innerText);
 			if (!response) {
 				// likely due to internal server error
-				response = {status: 500};
+				response = { status: 500 };
 			}
 		} else if (response.result) {
 			response = response.result;
@@ -710,11 +645,13 @@ OC.Uploader.prototype = _.extend({
 			return;
 		}
 		// retrieve more info about this file
-		this.filesClient.getFileInfo(fileUpload.getFullPath()).then(function(status, fileInfo) {
+		/*this.filesClient.getFileInfo(fileUpload.getFullPath()).then(function(status, fileInfo) {
 			var original = fileInfo;
 			var replacement = file;
 			OC.dialogs.fileexists(fileUpload, original, replacement, self);
-		});
+		});*/
+
+		//todo 判断是否重名，并弹窗显示
 	},
 	/**
 	 * cancels all uploads
@@ -934,17 +871,17 @@ OC.Uploader.prototype = _.extend({
 	},
 
 	_showProgressBar: function() {
-		this.$uploadprogressbar.fadeIn();
+		/*this.$uploadprogressbar.fadeIn();
 		this.$uploadEl.trigger(new $.Event('resized'));
 		if (this._progressBarInterval) {
 			window.clearInterval(this._progressBarInterval);
 		}
 		this._progressBarInterval = window.setInterval(_.bind(this._updateProgressBar, this), 1000);
-		this._lastProgress = 0;
+		this._lastProgress = 0;*/
 	},
 
 	_updateProgressBar: function() {
-		var progress = parseInt(this.$uploadprogressbar.attr('data-loaded'), 10);
+		/*var progress = parseInt(this.$uploadprogressbar.attr('data-loaded'), 10);
 		var total = parseInt(this.$uploadprogressbar.attr('data-total'), 10);
 		if (progress !== this._lastProgress) {
 			this._lastProgress = progress;
@@ -964,7 +901,7 @@ OC.Uploader.prototype = _.extend({
 					upload.retry();
 				});
 			}
-		}
+		}*/
 	},
 
 	/**
@@ -1004,13 +941,13 @@ OC.Uploader.prototype = _.extend({
 
 		this.fileList = options.fileList;
 		this.filesClient = options.filesClient || OC.Files.getClient();
-		this.davClient = new OC.Files.Client({
+		/*this.davClient = new OC.Files.Client({
 			host: this.filesClient.getHost(),
 			root: OC.linkToRemoteBase('dav'),
 			useHTTPS: OC.getProtocol() === 'https',
 			userName: this.filesClient.getUserName(),
 			password: this.filesClient.getPassword()
-		});
+		});*/
 
 		if (options.url) {
 			this.url = options.url;
@@ -1481,3 +1418,380 @@ OC.Uploader.prototype = _.extend({
 		return this.fileUploadParam;
 	}
 }, OC.Backbone.Events);
+
+OC.Uploader_ = function() {
+	this.init.apply(this, arguments);
+};
+
+OC.Uploader_.prototype = _.extend({
+	_uploads: {},
+	_uploads_order: [],
+	_uploads_file: {},
+
+	_targetDir: '',
+	fileList: null,
+	_webuploader: null,
+	_loginToken: null,
+
+	keepOriginal: true,
+	keepReplacement: true,
+
+	init: function(options) {
+		var self = this;
+		options = options || {};
+		this._uploads = {};
+		this._uploads_order = [];
+		this._uploads_file = {};
+		this.fileList = options.fileList;
+		
+		if (options.url) {
+			this.url = options.url;
+		}
+
+		this.uploadParams = {
+			auto: true,
+			swf: './Uploader.swf',
+			server: '/task/upload',
+			resize: false,
+			chunked: true,				//开启分片上传
+			chunkRetry: 20,
+			// 分片大小
+			chunkSize: options.maxChunkSize ? options.maxChunkSize : 5 * 1024 * 1024,	
+			
+			threads: 5,
+			fileNumLimit: 10000, 			// 限制文件上传个数
+			methods: 'POST',
+			duplicate: false,			// 去重， 根据文件名字、文件大小和最后修改时间来生成hash Key
+		};
+
+
+		this._webuploader = WebUploader.create(this.uploadParams);
+
+		//绑定上传事件
+
+		//文件被添加之前
+		this._webuploader.on('beforeFileQueued', function(file) {
+			try {
+				// FIXME: not so elegant... need to refactor that method to return a value
+				Files.isFileNameValid(file.name);
+
+				return true;
+			} catch (errorMessage) {
+				OC.Notification.show(file.name + '上传失败：' + errorMessage, {timeout : 7, type: 'error'});
+				return false;
+			}
+		});
+
+		//当文件被添加进队列
+		this._webuploader.on('fileQueued', function(file) {
+			//console.log('_webuploader: add');
+			//console.log(file);
+
+			var upload = new OC.FileUpload(self, file, self._targetDir, '');
+			self._uploads[upload.id] = upload;
+			self._uploads_order.push(upload);
+			self._uploads_file[md5(file)] = upload;
+
+			self.trigger('add', file);
+		});
+		
+
+		// 文件上传过程中创建进度条实时显示。
+		this._webuploader.on('uploadProgress', function(file, percentage) {
+			console.log('_webuploader: add');
+			console.log(file);
+			self.trigger('progress', file, percentage);
+		});
+
+		this._webuploader.on('uploadSuccess', function(file) {
+			console.log('_webuploader: success');
+			console.log(file);
+			self.trigger('success', file);
+		});
+		
+		this._webuploader.on('uploadError', function(file) {
+			console.log('_webuploader: error');
+			console.log(file);
+			self.trigger('error', file);
+		});
+		
+		this._webuploader.on('uploadComplete', function(file) {
+			console.log('_webuploader: complete');
+			console.log(file);
+			self.trigger('complete', file);
+		});
+
+		//文件从队列中删除时
+		this._webuploader.on('fileDequeued', function(file) {
+			console.log('_webuploader: dequeued');
+			console.log(file);
+			self.trigger('remove', file);
+		});
+		
+
+		this._webuploader.on('uploadBeforeSend', function(object, data, headers) {
+			console.log('_webuploader: uploadBeforeSend');
+			console.log(object);
+			//带上身份验证信息
+			if (this._loginToken) {
+				headers['logintoken'] = this._loginToken;
+			}
+			
+			self.trigger('progress', file, percentage);
+		});
+
+		//某个文件开始上传前触发，返回false则停止上传
+		this._webuploader.on('beforeUploadStart', function(file) {
+			console.log('_webuploader: beforeUploadStart');
+			console.log(file);
+
+
+			var upload = self._uploads_file[md5(file)];
+			if (!upload){
+				console.warn('找不到对应的 upload');
+				return false;
+			}
+
+			//计算MD5
+			var my_result = false;
+			var wait_md5_func = async function (){
+				await self._webuploader.md5File(file).then(function(val){
+					console.log('md5: ' + val);
+					my_result = true;
+					upload.setMD5(val);
+				}, function(val){
+					console.warn('wrong md5: ' + val);
+				});
+
+			};
+
+			wait_md5_func();
+			if (!my_result){
+				return false;
+			}
+
+			my_result = false;
+			//在服务器上创建对应的上传任务
+			$.ajax({
+				url: OC.filePath('task/appendupload') + '?id=' + upload.getId(),
+				data: {},
+				type: "POST",
+				datatype: "json",
+				headers: {logintoken: self._loginToken},
+				async: false,
+				cache: false,
+				data: {
+					from: upload.getOriginalFullPath(),
+					target: upload.getTargetFullPath(),
+					filehash: upload.getMD5(),
+				},
+				success: function(data, result, response){
+					console.log('task/appendupload suc!');
+					console.log(data);
+					my_result = true;
+				},
+				error: function(data, result){
+					console.log('task/appendupload failed...');
+					console.log(data);
+					console.warn('服务器创建上传任务失败：' + data);
+				},
+			});
+
+			return my_result;
+		});
+
+		return this.uploadParams;
+	},
+
+	setToken: function(token) {
+		this._loginToken = token;
+	},
+
+	appendFiles: function(files, targetdir) {
+		console.log('appendFiles');
+		console.log(files);
+		console.log(targetdir);
+		if (files.length <= 0) {
+			return;
+		}
+
+		this._targetDir = targetdir;
+
+		for(var i = 0; i < files.length; i++){
+			this._webuploader.addFiles(files[i]);
+		}
+	},
+
+	pauseUpload: function(file) {
+		this._webuploader.stop(file);
+	},
+
+	pauseUploads: function() {
+		_.each(this._uploads, function(upload) {
+			upload.pause();
+		});
+	},
+
+	startUpload: function(file) {
+		this._webuploader.upload(file);
+	},
+
+	startUploads: function() {
+		_.each(this._uploads, function(upload) {
+			upload.upload();
+		});
+	},
+
+
+	cancelUpload: function(file, upload) {
+
+		this._webuploader.cancelFile(file);
+		this._uploads[upload.id] = null;
+		this._uploads_file[md5(file)] = null;
+
+		Array.prototype.indexOf = function(val) { 
+			for (var i = 0; i < this.length; i++) { 
+				if (this[i].id == val) return i; 
+			} 
+			return -1; 
+		};
+
+		var idx = this._uploads_order.indexOf(upload.id);
+		if (idx > -1){
+			this._uploads_order.splice(index, 1); 
+		}
+	},
+
+	cancelUploads: function() {
+		_.each(this._uploads, function(upload) {
+			upload.cancel();
+		});
+	},
+
+	submitUploads: function(uploads) {
+
+	},
+
+	showConflict: function(fileUpload) {
+		var self = this;
+		_.defer(function() {
+			self.onAutorename(fileUpload);
+		});
+	},
+
+	cancelUploads: function() {
+		this.log('取消所有上传任务');
+		jQuery.each(this._uploads, function(i, upload) {
+			upload.cancelUpload();
+		});
+
+		this.clear();
+	},
+
+	clear: function() {
+		var remainingUploads = {};
+		_.each(this._uploads, function(upload, key) {
+			if (!upload.isDone && !upload.aborted) {
+				remainingUploads[key] = upload;
+			}
+		});
+		this._uploads = remainingUploads;
+	},
+
+	getUpload: function(data) {
+		/*if (_.isString(data)) {
+			return this._uploads[data];
+		} else if (data.uploadId) {
+			return this._uploads[data.uploadId];
+		}*/
+
+		return null;
+	},
+
+	showUploadCancelMsg: _.debounce(function() {
+		OC.Notification.show('上传已被取消', {timeout : 7, type: 'error'});
+	}, 500),
+
+	onCancel: function() {
+		this.cancelUploads();
+	},
+
+	onContinue: function(conflicts) {
+		var self = this;
+		jQuery.each(conflicts, function(i, conflict) {
+			conflict = $(conflict);
+			if (keepOriginal && keepReplacement) {
+				// when both selected -> autorename
+				self.onAutorename(conflict.data('data'));
+			} else if (keepReplacement) {
+				// when only replacement selected -> overwrite
+				self.onReplace(conflict.data('data'));
+			} else {
+				// when only original selected -> skip
+				// when none selected -> skip
+				self.onSkip(conflict.data('data'));
+			}
+		});
+	},
+
+	onSkip: function(upload) {
+		this.log('skip', null, upload);
+		upload.deleteUpload();
+	},
+
+	onReplace: function(upload) {
+		this.log('replace', null, upload);
+		upload.setConflictMode(OC.FileUpload.CONFLICT_MODE_OVERWRITE);
+		this.submitUploads([upload]);
+	},
+
+	onAutorename:function(upload) {
+		this.log('autorename', null, upload);
+		upload.setConflictMode(OC.FileUpload.CONFLICT_MODE_AUTORENAME);
+
+		do {
+			upload.autoRename();
+			// if file known to exist on the client side, retry
+		} while (this.fileList && this.fileList.inList(upload.getFileName()));
+
+		// resubmit upload
+		this.submitUploads([upload]);
+	},
+
+	_trace:false, //TODO implement log handler for JS per class?
+	log:function(caption, e, data) {
+		if (this._trace) {
+			console.log(caption);
+			console.log(data);
+		}
+	},
+
+	sanitizeFileName: function(fileName) {
+		return fileName.trim();
+	},
+
+	getUploads: function(start, end) {
+		var len = this._uploads_order.length;
+		if (start >= len) {
+			return [];
+		}
+
+		if (end >= len) {
+			end = len - 1;
+		}
+
+		var results = [];
+		for(var i = start; i <= end; i++) {
+			var upload = this._uploads_order[i];
+			results.push({
+				from: upload.getOriginalFullPath(),
+				title: upload.getFileName(),
+				target: upload.getTargetFullPath(),
+			});
+		}
+
+		return results;
+	},
+}, OC.Backbone.Events);
+
+OC.UploaderInstance = new OC.Uploader_({});

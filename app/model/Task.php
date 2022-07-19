@@ -12,7 +12,7 @@ class Task extends Model
     // 设置当前模型的数据库连接
     //protected $connection = 'db_config';
 
-    protected $readonly = ['task_id'];
+    protected $readonly = ['task_id', 'task_file_hash'];
 
     // 设置字段信息
     protected $schema = [
@@ -25,6 +25,10 @@ class Task extends Model
         'task_total'            => 'int',
         'task_value'            => 'int',
         'task_state'            => 'int',
+
+        'task_create_time'      => 'int',
+        'task_file_hash'        => 'string',
+        'task_client_id'        => 'string'
     ];
 
     protected $pk = 'task_id';

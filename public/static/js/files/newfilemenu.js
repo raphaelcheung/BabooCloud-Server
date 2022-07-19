@@ -51,13 +51,14 @@
 		/**
 		 * @type OCA.Files.FileList
 		 */
-		fileList: null,
+		fileList: null, 
 
 		initialize: function(options) {
 			var self = this;
 			var $uploadEl = $('#file_upload_start');
 			if ($uploadEl.length) {
 				$uploadEl.on('fileuploadstart', function() {
+					//console.log('!!!!');
 					self.trigger('actionPerformed', 'upload');
 				});
 			} else {
@@ -108,7 +109,9 @@
 			// which itself triggers the upload dialog.
 			// Currently the upload logic is still in file-upload.js and filelist.js
 			if (action === 'upload') {
+				//console.log('1');
 				OC.hideMenus();
+				//this.trigger('chooseupload', '');
 			} else {
 				event.preventDefault();
 				this.$el.find('.menuitem.active').removeClass('active');
@@ -245,7 +248,7 @@
 		render: function() {
 			this.$el.html(this.template({
 				uploadMaxHumanFileSize: 'TODO',
-				uploadLabel: '上传',
+				uploadLabel: '上传文件',
 				items: this._menuItems
 			}));
 			OC.Util.scaleFixForIE8(this.$('.svg'));

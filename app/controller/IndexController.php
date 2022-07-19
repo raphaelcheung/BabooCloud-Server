@@ -97,6 +97,8 @@ class IndexController extends BaseController
 
             //files view
             "files/app.js",
+            "webuploader/webuploader.js",
+
             "files/file-upload.js",
             "files/newfilemenu.js",
             "files/jquery.fileupload.js",
@@ -125,7 +127,6 @@ class IndexController extends BaseController
 
             "files/taskdownlist.js",
             "files/taskuplist.js",
-            "webuploader/webuploader.js"
         ];
 
 

@@ -360,16 +360,13 @@
             if (options.enableUpload) {
                 // TODO: auto-create this element
                 var $uploadEl = this.$el.find('#file_upload_start');
+                //console.log('0');
+                //console.log($uploadEl);
                 if ($uploadEl.exists()) {
-                    this._uploader = new OC.Uploader($uploadEl, {
-                        fileList: this,
-                        filesClient: this.filesClient,
-                        dropZone: $('#content'),
-                        maxChunkSize: options.maxChunkSize,
-                        uploadStallTimeout: options.uploadStallTimeout,
-                        uploadStallRetries: options.uploadStallRetries
-                    });
-
+                    //console.log('00');
+                    this._uploader = OC.UploaderInstance;
+                    //console.log(this._uploader);
+                    this._uploader.setToken(cloud_token);
                     this.setupUploadEvents(this._uploader);
                 }
             }
@@ -3126,7 +3123,7 @@
             self._uploads = {};
 
             // detect the progress bar resize
-            uploader.on('resized', this._onResize);
+            //uploader.on('resized', this._onResize);
 
             uploader.on('drop', function(e, data) {
                 self._uploader.log('filelist handle fileuploaddrop', e, data);
@@ -3191,7 +3188,7 @@
                     data.targetDir = self.getCurrentDirectory();
                 }
             });
-            uploader.on('add', function(e, data) {
+            /*uploader.on('add', function(e, data) {
                 self._uploader.log('filelist handle fileuploadadd', e, data);
 
                 // add ui visualization to existing folder
@@ -3218,7 +3215,7 @@
                     data.targetDir = self.getCurrentDirectory();
                 }
 
-            });
+            });*/
             /*
              * when file upload done successfully add row to filelist
              * update counter when uploading to sub folder
@@ -3384,6 +3381,7 @@
         },
 
         _onClickNewButton: function(event) {
+            var self = this;
             var $target = $(event.target);
             if (!$target.hasClass('.button')) {
                 $target = $target.closest('.button');
@@ -3394,10 +3392,16 @@
                 return false;
             }
             if (!this._newFileMenu) {
+                var popWindows = $('#file_upload_start');
                 this._newFileMenu = new OCA.Files.NewFileMenu({
                     fileList: this
                 });
                 $('body').append(this._newFileMenu.$el);
+
+                popWindows.on('change', function(){
+                    var files = popWindows.prop('files');
+                    self._uploader.appendFiles(files, self.getCurrentDirectory());
+                });
             }
             this._newFileMenu.showAt($target);
 

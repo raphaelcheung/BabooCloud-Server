@@ -194,16 +194,13 @@ class DbSystem
         return Task::find($id);
     }
 
-    public static function checkDownListTask($uid, $from, $target, $hash)
+    public static function findTaskDb($params)
     {
-        $result = Task::where([
-            'task_owner' => $uid,
-            'task_type'  => 1,
-            'task_from_path' => $from,
-            'task_target_path' => $target,
-            'task_hash' => $hash,
-        ])->find();
+        return Task::where($params)->find();
+    }
 
-        return $result == null;
+    public static function selectTaskDb($params, $count_per_page, $page_id)
+    {
+        return Task::where($params)->page($page_id, $count_per_page)->select();
     }
 }
