@@ -363,5 +363,7 @@ class User
                 return '添加任务异常';
             }
         }
+
+        return true;
     }
 }

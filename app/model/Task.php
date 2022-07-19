@@ -18,12 +18,9 @@ class Task extends Model
     protected $schema = [
         'task_id'               => 'int',
         'task_type'             => 'int',
-        'task_display_text'     => 'string',
         'task_from_path'        => 'string',
         'task_target_path'      => 'string',
         'task_owner'            => 'string',
-        'task_total'            => 'int',
-        'task_value'            => 'int',
         'task_state'            => 'int',
 
         'task_create_time'      => 'int',

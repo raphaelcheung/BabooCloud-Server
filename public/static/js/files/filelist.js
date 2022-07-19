@@ -324,7 +324,7 @@
 
             this._renderNewButton();
 
-            this.$el.find('thead th .columntitle').click(_.bind(this._onClickHeader, this));
+            this.$el.find('#filestable thead th .columntitle').click(_.bind(this._onClickHeader, this));
 
             this._onResize = _.debounce(_.bind(this._onResize, this), 100);
             $('#app-content').on('appresized', this._onResize);

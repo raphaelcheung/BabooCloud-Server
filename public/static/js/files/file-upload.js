@@ -44,9 +44,7 @@ OC.FileUpload = function(uploader, file, targetpath, originalpath) {
 
 	var path = OC.joinPaths(this._targetFolder, this.getFile().name);
 	this._targetFullPath = path;
-	//console.log('_originalFullPath: ' + this._originalFullPath);
-	//console.log('_targetFullPath: ' + this._targetFolder);
-	//console.log('_targetFullPath: ' + path);
+
 
 	this.id = md5(this.getFile().__hash + '-' + path + '-' + (new Date()).getTime());
 };
@@ -100,6 +98,14 @@ OC.FileUpload.prototype = {
 
 	getMD5: function(){
 		return this._md5;
+	},
+
+	getStatus: function(){
+		return this._file.getStatus();
+	},
+
+	getStatusText: function(){
+		return this._file.statusText;
 	},
 
 	setMD5: function(md5){
@@ -219,11 +225,11 @@ OC.FileUpload.prototype = {
 	 * @return {bool}
 	 */
 	isPending: function() {
-		return this._file.Status === 'inited' || this._file.Status === 'queued';
+		return this._file.getStatus() === 'inited' || this._file.getStatus() === 'queued';
 	},
 
 	isPause: function() {
-		return this._file.Status === 'interrupt';
+		return this._file.getStatus() === 'interrupt';
 	},
 
 	deleteUpload: function() {
@@ -326,25 +332,6 @@ OC.FileUpload.prototype = {
 
 	},
 
-	/**
-	 * Abort the upload
-	 */
-	abort: function() {
-
-		this.deleteUpload();
-	},
-
-	pause: function() {
-		this._uploader.pauseUpload(this._file);
-	},
-
-	upload: function() {
-		this._uploader.startUpload(this._file);
-	},
-
-	cancel: function() {
-
-	},
 
 	/**
 	 * retry the upload
@@ -1449,7 +1436,7 @@ OC.Uploader_.prototype = _.extend({
 		}
 
 		this.uploadParams = {
-			auto: true,
+			auto: false,
 			swf: './Uploader.swf',
 			server: '/task/upload',
 			resize: false,
@@ -1484,13 +1471,14 @@ OC.Uploader_.prototype = _.extend({
 
 		//当文件被添加进队列
 		this._webuploader.on('fileQueued', function(file) {
-			//console.log('_webuploader: add');
-			//console.log(file);
-
 			var upload = new OC.FileUpload(self, file, self._targetDir, '');
 			self._uploads[upload.id] = upload;
 			self._uploads_order.push(upload);
 			self._uploads_file[md5(file)] = upload;
+
+			file.on('statuschange', function(status, prevStatus){
+				self.trigger('statuschange', upload, status, upload.getStatusText());
+			});
 
 			self.trigger('add', file);
 		});
@@ -1498,7 +1486,7 @@ OC.Uploader_.prototype = _.extend({
 
 		// 文件上传过程中创建进度条实时显示。
 		this._webuploader.on('uploadProgress', function(file, percentage) {
-			console.log('_webuploader: add');
+			console.log('_webuploader: uploadProgress');
 			console.log(file);
 			self.trigger('progress', file, percentage);
 		});
@@ -1537,14 +1525,15 @@ OC.Uploader_.prototype = _.extend({
 				headers['logintoken'] = this._loginToken;
 			}
 			
-			self.trigger('progress', file, percentage);
+			//self.trigger('progress', file, percentage);
 		});
 
 		//某个文件开始上传前触发，返回false则停止上传
 		this._webuploader.on('beforeUploadStart', function(file) {
 			console.log('_webuploader: beforeUploadStart');
-			console.log(file);
+			//console.log(file);
 
+			//console.log('0');
 
 			var upload = self._uploads_file[md5(file)];
 			if (!upload){
@@ -1555,20 +1544,26 @@ OC.Uploader_.prototype = _.extend({
 			//计算MD5
 			var my_result = false;
 			var wait_md5_func = async function (){
-				await self._webuploader.md5File(file).then(function(val){
-					console.log('md5: ' + val);
+				return await self._webuploader.md5File(file).then(function(val){
+					//console.log('md5: ' + val);
 					my_result = true;
 					upload.setMD5(val);
+					return true;
 				}, function(val){
 					console.warn('wrong md5: ' + val);
+					return false;
 				});
 
 			};
+			//console.log('1');
 
-			wait_md5_func();
+			my_result = wait_md5_func();
+			//console.log('2');
+			
 			if (!my_result){
 				return false;
 			}
+			//console.log('3');
 
 			my_result = false;
 			//在服务器上创建对应的上传任务
@@ -1596,9 +1591,13 @@ OC.Uploader_.prototype = _.extend({
 					console.warn('服务器创建上传任务失败：' + data);
 				},
 			});
+			//console.log('4');
+
 
 			return my_result;
 		});
+
+
 
 		return this.uploadParams;
 	},
@@ -1608,9 +1607,6 @@ OC.Uploader_.prototype = _.extend({
 	},
 
 	appendFiles: function(files, targetdir) {
-		console.log('appendFiles');
-		console.log(files);
-		console.log(targetdir);
 		if (files.length <= 0) {
 			return;
 		}
@@ -1622,32 +1618,35 @@ OC.Uploader_.prototype = _.extend({
 		}
 	},
 
-	pauseUpload: function(file) {
-		this._webuploader.stop(file);
+	pauseUpload: function(id) {
+		var upload = this._uploads[id];
+		this._webuploader.stop(upload.getFile());
 	},
 
 	pauseUploads: function() {
+		var self = this;
 		_.each(this._uploads, function(upload) {
-			upload.pause();
+			self._webuploader.stop(upload.getFile());
 		});
 	},
 
-	startUpload: function(file) {
-		this._webuploader.upload(file);
+	startUpload: function(id) {
+		var upload = this._uploads[id];
+		this._webuploader.upload(upload.getFile());
 	},
 
 	startUploads: function() {
+		var self = this;
 		_.each(this._uploads, function(upload) {
-			upload.upload();
+			self._webuploader.upload(upload.getFile());
 		});
 	},
 
 
-	cancelUpload: function(file, upload) {
-
-		this._webuploader.cancelFile(file);
-		this._uploads[upload.id] = null;
-		this._uploads_file[md5(file)] = null;
+	cancelUpload: function(id) {
+		var upload = this._uploads[id];
+		this._uploads[id] = null;
+		this._uploads_file[md5(upload.getFile())] = null;
 
 		Array.prototype.indexOf = function(val) { 
 			for (var i = 0; i < this.length; i++) { 
@@ -1660,11 +1659,15 @@ OC.Uploader_.prototype = _.extend({
 		if (idx > -1){
 			this._uploads_order.splice(index, 1); 
 		}
+
+		this._webuploader.cancelFile(upload.getFile());
+
 	},
 
 	cancelUploads: function() {
+		var self = this;
 		_.each(this._uploads, function(upload) {
-			upload.cancel();
+			self.cancelUpload(upload.getId());
 		});
 	},
 
@@ -1787,6 +1790,9 @@ OC.Uploader_.prototype = _.extend({
 				from: upload.getOriginalFullPath(),
 				title: upload.getFileName(),
 				target: upload.getTargetFullPath(),
+				id: upload.getId(),
+				status: upload.getStatus(),
+				statustext: upload.getStatusText()
 			});
 		}
 

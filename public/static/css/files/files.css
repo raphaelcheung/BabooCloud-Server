@@ -939,9 +939,11 @@ html.ie8 .column-mtime .selectedActions {
 #downTaskList a.action.action-play,
 #downTaskList a.action.action-cancel,
 #downTaskList a.action.action-folder,
+#downTaskList a.action.action-pause
 #upTaskList a.action.action-play,
 #upTaskList a.action.action-cancel,
-#upTaskList a.action.action-folder {
+#upTaskList a.action.action-folder,
+#upTaskList a.action.action-pause {
 	padding: 7px 4px;
 }
 
@@ -956,21 +958,14 @@ html.ie8 .column-mtime .selectedActions {
 	display: none;
 }
 
-#fileList a.action.action-share {
-	padding: 17px 14px;
-}
-
-#fileList a.action.action-play {
-	padding: 17px 14px;
-}
-
-#fileList a.action.action-cancel {
-	padding: 17px 14px;
-}
-
+#fileList a.action.action-share,
+#fileList a.action.action-cancel,
+#fileList a.action.action-play,
+#fileList a.action.action-pause,
 #fileList a.action.action-folder {
 	padding: 17px 14px;
 }
+
 
 #fileList a.action.action-menu {
 	padding: 17px 0 17px 14px;

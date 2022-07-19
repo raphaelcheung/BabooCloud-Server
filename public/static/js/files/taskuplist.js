@@ -61,14 +61,12 @@
 				return;
 			}
 
-            //console.log('1');
+            
 
 			this.$el = $el;
 			if (options.id) {
 				this.id = options.id;
 			}
-
-            //console.log('2');
 
 			this.$container = options.scrollContainer || $(window);
 			this.$table = $el.find('table:first');
@@ -101,7 +99,110 @@
             }
 
             OC.Plugins.attach('OCA.Files.TaskUpList', this);
+
+            this._uploader.on('statuschange', function(upload, status, statustext){
+                var taskItem = self.$upTaskList.find('#taskRow_' + upload.getId());
+                
+                //更新进度状态描述
+                taskItem.find('#taskdes').text(self.translateStatus(status, statustext));
+
+                //更新操作按钮的状态
+                self.updateAction(taskItem, status);
+
+            });
 		},
+
+        updateAction: function(taskItem, status){
+            switch(status){
+                case 'inited':
+                    var item = taskItem.find('#actionPlay');
+                    //if (item.hasClass('action-pause')){
+                        item.removeClass('action-pause');
+                    //}
+
+                    item.addClass('action-play');
+
+                    item = taskItem.find('#actionPlay span');
+                    item.removeClass('icon-pause');
+                    item.addClass('icon-play');
+                    break;
+                case 'queued':
+                    var item = taskItem.find('#actionPlay');
+                    //if (item.hasClass('action-pause')){
+                        item.removeClass('action-play');
+                    //}
+
+                    item.addClass('action-pause');
+
+                    item = taskItem.find('#actionPlay span');
+                    item.removeClass('icon-play');
+                    item.addClass('icon-pause');
+
+                    break;
+                case 'progress':
+                    break;
+                case 'complete':
+                    return '完成';
+                case 'interrupt':
+                    var item = taskItem.find('#actionPlay');
+                    //if (item.hasClass('action-pause')){
+                        item.removeClass('action-pause');
+                    //}
+
+                    item.addClass('action-play');
+
+                    item = taskItem.find('#actionPlay span');
+                    item.removeClass('icon-pause');
+                    item.addClass('icon-play');
+                    break;
+                case 'error':
+                    var item = taskItem.find('#actionPlay');
+                    //if (item.hasClass('action-pause')){
+                        item.removeClass('action-pause');
+                    //}
+
+                    item.addClass('action-play');
+
+                    item = taskItem.find('#actionPlay span');
+                    item.removeClass('icon-pause');
+                    item.addClass('icon-play');
+                    break;
+                case 'invalid':
+                    var item = taskItem.find('#actionPlay');
+                    //if (item.hasClass('action-pause')){
+                        item.removeClass('action-pause');
+                    //}
+
+                    item.addClass('action-play');
+                    item.addClass('disabled');
+
+                    item = taskItem.find('#actionPlay span');
+                    item.removeClass('icon-pause');
+                    item.addClass('icon-play');
+                    break;
+            }
+        },
+
+        translateStatus: function(status, statustext){
+            switch(status){
+                case 'inited':
+                    return '已添加';
+                case 'queued':
+                    return '排队等待中...';
+                case 'progress':
+                    return '正在上传...';
+                case 'complete':
+                    return '完成';
+                case 'interrupt':
+                    return '已暂停';
+                case 'error':
+                    return (statustext != null && statustext.length > 0)
+                        ? statustext : '上传出错，请重试';
+                case 'invalid':
+                    return (statustext != null && statustext.length > 0)
+                        ? statustext : '该文件被限制上传';
+            }
+        },
 
         destroy: function() {
             console.log('taskdown: destroy');
@@ -216,6 +317,7 @@
                 //mime = taskData.mimetype,
                 taskTarget = taskData.target,
                 taskId = taskData.id,
+                self = this;
 
 
             options = options || {};
@@ -257,7 +359,9 @@
             td = $('<td></td>').attr({ "class": "taskprogress" });
             var progressDiv = $('<div id="taskprogress"><em class="label outer" style="display:none"><span class="desktop">准备上传中...</span><span class="mobile">...</span></em></div>');
             td.append(progressDiv);
-            var desDiv = $('<div id="taskprogress">122Kbps/s, 0.0MB/3GB</div>');
+
+            //进度描述
+            var desDiv = $('<div id="taskdes">' + this.translateStatus(taskData.status, taskData.statustext) +'</div>');
             td.append(desDiv);
 
             progressDiv.progressbar({value: 0});
@@ -275,15 +379,26 @@
 
             //添加操作按钮
             td = $('<td></td>').attr({ "class": "taskaction" });
-            var actionPlay = $('<a title="" class="action action-play permanent" href="#"><span class="icon icon-play"></span></a>');
-            var actionCancel = $('<a title="" class="action action-cancel permanent" href="#"><span class="icon icon-close"></span></a>');
-            var actionFolder = $('<a title="" class="action action-folder permanent" href="#"><span class="icon icon-folder"></span></a>');
+            var actionPlay = $('<a id="actionPlay" title="" class="action action-play permanent" href="javascript:void(0);"><span class="icon icon-play"></span></a>');
+            var actionCancel = $('<a id="actionCancel" title="" class="action action-cancel permanent" href="javascript:void(0);"><span class="icon icon-close"></span></a>');
+            var actionFolder = $('<a id="actionFolder" title="" class="action action-folder permanent" href="javascript:void(0);"><span class="icon icon-folder"></span></a>');
 
             td.append(actionPlay);
             td.append(actionCancel);
             td.append(actionFolder);
             tr.append(td);
 
+            actionPlay.on('click', function(){
+                console.log('actionPlay.onclick');
+                //console.log(taskId);
+                if (actionPlay.hasClass('action-play')){
+                    self._uploader.startUpload(taskId);
+                } else {
+                    self._uploader.pauseUpload(taskId);
+                }
+            });
+
+            this.updateAction(tr, taskData.status);
             return tr;
 		},
 
@@ -354,8 +469,8 @@
 
             var datas = this._uploader.getUploads(index * 20, (index + 1) * 20);
             
-            console.log('loadNextPage: ' + index);
-            console.log(datas);
+            //console.log('loadNextPage: ' + index);
+            //console.log(datas);
 
             if (datas.length > 0){
                 self.$indexLastPage = index;
@@ -492,8 +607,8 @@
         },
 
         _onUrlChanged: function(e){
-            console.log('_onUrlChanged');
-            console.log(e);
+            //console.log('_onUrlChanged');
+            //console.log(e);
             if (e && e.view == 'uptasks'){
                 this.reload();
             }
