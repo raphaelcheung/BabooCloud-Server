@@ -25,7 +25,9 @@ class Task extends Model
 
         'task_create_time'      => 'int',
         'task_file_hash'        => 'string',
-        'task_client_id'        => 'string'
+        'task_client_id'        => 'string',
+        'task_file_type'        => 'string',
+        'task_lastmodified'     => 'int'
     ];
 
     protected $pk = 'task_id';

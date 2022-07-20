@@ -338,6 +338,10 @@ class User
 
     public function appendUploadTask($params)
     {
+        if (FileSystem::checkUserFileExists($this->Account->uid, $params['task_target_path'])){
+            throw new DisplayException(400, '文件已存在');
+        }
+
         $task = DbSystem::findTaskDb([
             'task_owner' => $this->Account->uid,
             'task_type' => 0,
@@ -354,6 +358,8 @@ class User
             $task->task_create_time = time();
             $task->task_file_hash = $params['task_file_hash'];
             $task->task_client_id = $params['task_client_id'];
+            $task->task_file_type = $params['task_file_type'];
+            $task->task_lastmodified = $params['task_lastmodified'];
 
             try {
                 $task->save();
@@ -362,6 +368,27 @@ class User
                 Log::record($e->getMessage(), 'warnning', 'User::appendDownTask');
                 return '添加任务异常';
             }
+        }
+
+        return true;
+    }
+
+    public function upload($params)
+    {
+        $task = DbSystem::findTaskDb([
+            'task_owner' => $this->Account->uid,
+            'task_type' => 0,
+            'task_client_id' => $params['task_client_id'],
+        ]);
+
+        if ($task == null){
+            throw new DisplayException(404, '没有找到对应的上传任务');
+        }
+
+        if ($params['chunks'] > 0){
+            FileSystem::saveUploadChunk($params['task_client_id'], $params['chunk'], $params['file']);
+        }else if (FileSystem::saveSingleUnload($this->Account->uid, $task, $params['file'])){
+
         }
 
         return true;

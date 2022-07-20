@@ -3,11 +3,11 @@
     "disks": {
         "local": {
             "type": "local",
-            "root": "D:\\WorkGroup\\RD\\thinkphp\\runtime\\storage"
+            "root": "D:\\WorkGroup\\RD\\BabooCloud-Server\\runtime"
         },
         "public": {
             "type": "local",
-            "root": "D:\\WorkGroup\\RD\\thinkphp\\public\/storage",
+            "root": ".\\public\/storage",
             "url": "\/storage",
             "visibility": "public"
         }

@@ -3803,9 +3803,7 @@ return (function( root, factory ) {
                     promise;
     
                 if ( file ) {
-                    if (!me.owner.trigger( 'beforeUploadStart', file )){
-                        return;
-                    }
+                    me.owner.trigger( 'beforeUploadStart', file );
                     
                     promise = me.request( 'before-send-file', file, function() {
     

@@ -100,6 +100,14 @@ OC.FileUpload.prototype = {
 		return this._md5;
 	},
 
+	getLastModified: function(){
+		return this._file.lastModifiedDate;
+	},
+
+	getType: function(){
+		return this._file.type;
+	},
+
 	getStatus: function(){
 		return this._file.getStatus();
 	},
@@ -1441,7 +1449,7 @@ OC.Uploader_.prototype = _.extend({
 			server: '/task/upload',
 			resize: false,
 			chunked: true,				//开启分片上传
-			chunkRetry: 20,
+			chunkRetry: 2,
 			// 分片大小
 			chunkSize: options.maxChunkSize ? options.maxChunkSize : 5 * 1024 * 1024,	
 			
@@ -1474,46 +1482,81 @@ OC.Uploader_.prototype = _.extend({
 			var upload = new OC.FileUpload(self, file, self._targetDir, '');
 			self._uploads[upload.id] = upload;
 			self._uploads_order.push(upload);
-			self._uploads_file[md5(file)] = upload;
+			self._uploads_file[file.id] = upload;
 
 			file.on('statuschange', function(status, prevStatus){
 				self.trigger('statuschange', upload, status, upload.getStatusText());
 			});
 
-			self.trigger('add', file);
+			self.trigger('add', upload);
 		});
 		
 
 		// 文件上传过程中创建进度条实时显示。
 		this._webuploader.on('uploadProgress', function(file, percentage) {
 			console.log('_webuploader: uploadProgress');
-			console.log(file);
-			self.trigger('progress', file, percentage);
+
+			var upload = self._uploads_file[file.id];
+
+			if (!upload){
+				console.warn('找不到文件对应的上传任务：' + file.name);
+				return;
+			}
+
+			self.trigger('progress', upload, percentage);
 		});
 
 		this._webuploader.on('uploadSuccess', function(file) {
 			console.log('_webuploader: success');
-			console.log(file);
-			self.trigger('success', file);
+
+			var upload = self._uploads_file[file.id];
+
+			if (!upload){
+				console.warn('找不到文件对应的上传任务：' + file.name);
+				return;
+			}
+
+			self.trigger('success', upload);
 		});
 		
-		this._webuploader.on('uploadError', function(file) {
+		this._webuploader.on('uploadError', function(file, reason) {
 			console.log('_webuploader: error');
-			console.log(file);
-			self.trigger('error', file);
+			console.log(reason);
+			var upload = self._uploads_file[file.id];
+
+			if (!upload){
+				console.warn('找不到文件对应的上传任务：' + file.name);
+				return;
+			}
+
+			self.trigger('error', upload);
 		});
 		
 		this._webuploader.on('uploadComplete', function(file) {
 			console.log('_webuploader: complete');
-			console.log(file);
-			self.trigger('complete', file);
+
+			var upload = self._uploads_file[file.id];
+
+			if (!upload){
+				console.warn('找不到文件对应的上传任务：' + file.name);
+				return;
+			}
+
+			self.trigger('complete', upload);
 		});
 
 		//文件从队列中删除时
 		this._webuploader.on('fileDequeued', function(file) {
 			console.log('_webuploader: dequeued');
-			console.log(file);
-			self.trigger('remove', file);
+
+			var upload = self._uploads_file[file.id];
+
+			if (!upload){
+				console.warn('找不到文件对应的上传任务：' + file.name);
+				return;
+			}
+
+			self.trigger('remove', upload);
 		});
 		
 
@@ -1521,33 +1564,41 @@ OC.Uploader_.prototype = _.extend({
 			console.log('_webuploader: uploadBeforeSend');
 			console.log(object);
 			//带上身份验证信息
-			if (this._loginToken) {
-				headers['logintoken'] = this._loginToken;
+
+			headers['logintoken'] = this._loginToken;
+
+			var upload = self._uploads_file[object.file.id];
+
+			if (!upload){
+				console.warn('找不到文件对应的上传任务：' + object.name);
 			}
+
+			data['uploadid'] = upload.getId();
 			
-			//self.trigger('progress', file, percentage);
 		});
 
 		//某个文件开始上传前触发，返回false则停止上传
-		this._webuploader.on('beforeUploadStart', function(file) {
+		this._webuploader.on('beforeUploadStart', async function(file) {
 			console.log('_webuploader: beforeUploadStart');
-			//console.log(file);
+			console.log(file);
 
-			//console.log('0');
-
-			var upload = self._uploads_file[md5(file)];
+			var upload = self._uploads_file[file.id];
 			if (!upload){
 				console.warn('找不到对应的 upload');
-				return false;
+				self.pauseUpload(upload);
 			}
+
+			console.log(upload.getFile().name);
+			console.log(upload.getId());
+			console.log(self._uploads_file);
 
 			//计算MD5
 			var my_result = false;
 			var wait_md5_func = async function (){
 				return await self._webuploader.md5File(file).then(function(val){
-					//console.log('md5: ' + val);
 					my_result = true;
 					upload.setMD5(val);
+					console.log('1 MD5： ' + upload.getMD5());
 					return true;
 				}, function(val){
 					console.warn('wrong md5: ' + val);
@@ -1555,20 +1606,23 @@ OC.Uploader_.prototype = _.extend({
 				});
 
 			};
-			//console.log('1');
 
-			my_result = wait_md5_func();
-			//console.log('2');
+			console.log('0 MD5： ' + upload.getMD5());
+
+			my_result = await wait_md5_func();
+			console.log('2 MD5： ' + upload.getMD5());
 			
 			if (!my_result){
-				return false;
+				self.pauseUpload(upload);
+				return;
 			}
-			//console.log('3');
+
+			console.log('3');
 
 			my_result = false;
 			//在服务器上创建对应的上传任务
 			$.ajax({
-				url: OC.filePath('task/appendupload') + '?id=' + upload.getId(),
+				url: OC.filePath('task/appendupload'),
 				data: {},
 				type: "POST",
 				datatype: "json",
@@ -1579,22 +1633,28 @@ OC.Uploader_.prototype = _.extend({
 					from: upload.getOriginalFullPath(),
 					target: upload.getTargetFullPath(),
 					filehash: upload.getMD5(),
+					type: upload.getType(),
+					lastmodified: upload.getLastModified(),
+					id: upload.getId()
 				},
 				success: function(data, result, response){
 					console.log('task/appendupload suc!');
-					console.log(data);
+					//console.log(data);
 					my_result = true;
 				},
 				error: function(data, result){
 					console.log('task/appendupload failed...');
-					console.log(data);
+					//console.log(data);
 					console.warn('服务器创建上传任务失败：' + data);
 				},
 			});
-			//console.log('4');
+
+			console.log('4');
 
 
-			return my_result;
+			if (!my_result){
+				self.pauseUpload(upload);
+			}
 		});
 
 

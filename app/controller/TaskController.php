@@ -2,6 +2,8 @@
 namespace app\controller;
 
 use app\BaseController;
+use app\lib\ValidateHelper;
+use app\lib\Base;
 use app\lib\DebugException;
 use app\lib\DisplayException;
 //use think\facade\Request;
@@ -74,32 +76,32 @@ class TaskController extends BaseController
         return json('', 200);
     }
 
-    public function appendupload($id)
+    public function appendupload()
     {
         $post = $this->_request->post();
         if (!isset($post) || (\is_array($post) && count($post) <= 0)) {
             throw new DisplayException(400, '参数错误');
         }
 
-        $params = ['task_client_id' => $id];
+        //trace('Task/appendupload: ' . print_r($post, true), 'debug');
 
-        if (!isset($post['from'])) {
+        $valid = new ValidateHelper();
+        $valid->addMD5('id', true);
+        $valid->addMD5('filehash', true);
+        $valid->addRelativeFilePath('target', true);
+
+        if (!$valid->check($post)){
             throw new DisplayException(400, '参数错误');
         }
 
-        $params['task_from_path'] = $post['from'];
-
-        if (!isset($post['target'])) {
-            throw new DisplayException(400, '参数错误');
-        }
-
-        $params['task_target_path'] = $post['target'];
-
-        if (!isset($post['filehash'])) {
-            throw new DisplayException(400, '参数错误');
-        }
-
-        $params['task_file_hash'] = $post['filehash'];
+        $params = [
+            'task_client_id' => $post['id'],
+            'task_from_path' => '',
+            'task_target_path' => Base::normalizeRelativePath($post['target']),
+            'task_file_hash' => $post['filehash'],
+            'task_file_type' => intval($post['type']),
+            'task_lastmodified' => intval($post['lastmodified']),
+        ];
 
         $user = $this->_request->user;
 
@@ -113,6 +115,44 @@ class TaskController extends BaseController
 
     public function upload()
     {
-        
+        $post = $this->_request->post();
+        if (!isset($post) || (\is_array($post) && count($post) <= 0)) {
+            throw new DisplayException(400, '参数错误');
+        }
+
+        //检查上传操作的合规性
+
+        //trace('upload: ' . print_r($post, true), 'debug');
+
+        $valid = new ValidateHelper();
+        $valid->addMD5('uploadid', true);
+        $valid->addRule('chunks', 'number|between:0,209716');
+        $valid->addRule('chunk', 'number|between:0,209716');
+
+        if (!$valid->check($post)){
+            throw new DisplayException(400, '参数错误');
+        }
+
+        $params = [
+            'task_client_id' => $post['uploadid'],
+            'chunks' => isset($post['chunks']) ? intval($post['chunks']) : 0,
+            'chunk' => isset($post['chunk']) ? intval($post['chunk']) : 0,
+        ];
+
+        $file = $this->_request->file();
+        if (count($file) <= 0){
+            return json('没有文件数据', 400);
+        }
+
+        $params['file'] = $file['file'];
+
+        $user = $this->_request->user;
+
+        $result = $user->upload($params);
+        if ($result != true){
+            return json($result, 400);
+        }
+
+        return json('', 200);
     }
 }

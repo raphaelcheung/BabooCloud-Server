@@ -15,7 +15,7 @@ class FileController extends BaseController
     }
     public function findfolder($path)
     {
-        trace('File/findfolder: path=' . $path, 'debug');
+        //trace('File/findfolder: path=' . $path, 'debug');
 
         $path = $this->checkPath($path);
 
@@ -23,7 +23,7 @@ class FileController extends BaseController
 
         $results = $user->GetSubs($path);
 
-        trace('File/findfolder: output-results=' . print_r($results, true), 'debug');
+        //trace('File/findfolder: output-results=' . print_r($results, true), 'debug');
 
         return json($results, 200);
     }

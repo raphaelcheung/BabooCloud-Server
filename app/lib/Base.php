@@ -112,6 +112,20 @@ class Base
         return Request::root(true) . '/static/css/' . $input . '?v=' . $GLOBALS['version']['hash'];
     }
 
+    public static function normalizeRelativePath($path)
+    {
+        $path = str_replace('\\', '/', $path);
+        if (strpos($path, '/') == 0){
+            $path = substr($path, 1);
+        }
+
+        if (strpos($path, '/') == strlen($path) - 1){
+            $path = substr($path, 0, strlen($path) - 1);
+        }
+
+        return $path;
+    }
+
     public static function getJsPath($input)
     {
         return Request::root(true) . '/static/js/' . $input . '?v=' . $GLOBALS['version']['hash'];

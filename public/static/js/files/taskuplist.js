@@ -108,7 +108,18 @@
 
                 //更新操作按钮的状态
                 self.updateAction(taskItem, status);
+            });
 
+            this._uploader.on('error', function(upload){
+                console.log('error');
+                console.log(upload.getStatusText());
+                var taskItem = self.$upTaskList.find('#taskRow_' + upload.getId());
+                
+                //更新进度状态描述
+                taskItem.find('#taskdes').text(self.translateStatus(upload.getStatus(), upload.getStatusText()));
+
+                //更新操作按钮的状态
+                self.updateAction(taskItem, upload.getStatus());
             });
 		},
 
@@ -196,11 +207,18 @@
                 case 'interrupt':
                     return '已暂停';
                 case 'error':
-                    return (statustext != null && statustext.length > 0)
-                        ? statustext : '上传出错，请重试';
+                    {
+                        switch(statustext){
+                            case 'http':
+                                return '请求失败，请稍候重试...';
+                            case 'abort':
+                                return '已取消';
+                            case 'server':
+                                return '服务器异常，请稍候重试...';
+                        }
+                    }
                 case 'invalid':
-                    return (statustext != null && statustext.length > 0)
-                        ? statustext : '该文件被限制上传';
+                    return '该文件被限制上传';
             }
         },
 
