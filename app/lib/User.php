@@ -13,6 +13,13 @@ class User
     private const TASK_STATE_PROCESSING = 1;
     private const TASK_STATE_COMPLETED = 2;
 
+    private const TASK_TYPE_UPLOAD = 0;
+    //private const TASK_TYPE_DOWNLOAD = 1;
+    private const TASK_TYPE_ADD = 2;
+    private const TASK_TYPE_DEL = 3;
+    private const TASK_TYPE_UPDATE = 4;
+
+
 
     protected const FILERESULT_TEMPLATE = [
         'name' => '',
@@ -44,10 +51,8 @@ class User
 
     public static function getUser(Account $account)
     {
-
         $user = new User($account);
         return $user;
-        
     }
 
     protected function __construct(Account $account)
@@ -73,7 +78,7 @@ class User
     {
         $folder = DbSystem::findFolder($this->Account->uid, $path);
 
-        if (!isset($folder)){
+        if ($folder == null){
             throw new DisplayException(404, '目录不存在');
         }
 
@@ -83,16 +88,12 @@ class User
         $result = [];
         $result[] = $this->fillFolderResult($folder);
 
-        if (isset($folders)){
-            foreach($folders as $folder){
-                $result[] = $this->fillFolderResult($folder);
-            }
+        foreach($folders as $folder){
+            $result[] = $this->fillFolderResult($folder);
         }
 
-        if (is_array($files)){
-            foreach($files as $file){
-                $result[] = $this->fillFileResult($file);
-            }
+        foreach($files as $file){
+            $result[] = $this->fillFileResult($file);
         }
 
         return $result;
@@ -118,29 +119,39 @@ class User
             'ext' => $file->file_ext,
             'isdir' => false,
             'modified' => $file->file_modified,
-            'upload_time' => $file->file_putin_time,
+            'upload_time' => $file->file_upload_time,
             'size' => $file->file_size,
             'status' => $file->file_status,
             'id' => $file->file_id,
-            'parent_path' => $parent['folder']->folder_parent_path,
+            'parent_path' => $file->folder_parent_path,
             'mimetype' => 'file'
         ]);
     }
 
     public function createFolder($path)
     {
+        if ($path === ''){
+            throw new DisplayException(403, '不能创建根目录');
+        }
+
         $path_nodes = explode('/', $path);
 
         $name = array_pop($path_nodes);
 
-        if (!isset($name)){
-            throw new DisplayException(400, '路径不正确');
+        if ($name === ''){
+            throw new DisplayException(400, '文件夹名称不合规');
         }
 
-        FileSystem::createFolder($this->Account->uid, $path);
+        $result = FileSystem::createFolder($this->Account->uid, $path);
+        if ($result instanceof Result){
+            throw new DisplayException($result->code(), $result->msg());
+        }
 
         $parent_path = implode('/', $path_nodes);
         $folder = DbSystem::createFolder($this->Account->uid, $parent_path, $name);
+        if ($result instanceof Result){
+            throw new DisplayException($result->code(), $result->msg());
+        }
 
         return array_merge(self::FILERESULT_TEMPLATE, [
             'name' => $folder->folder_name,
@@ -156,16 +167,12 @@ class User
     public function getFolder($path)
     {
         $path_nodes = explode('/', $path);
-        array_shift($path_nodes);
+        //array_shift($path_nodes);
         $current = $this->Folders;
 
         foreach($path_nodes as $node){
-            if (strcmp($node, '') == 0){
-                throw new DisplayException(404, '路径不正确');
-            }
-
             if (!isset($current['subs'][$node])){
-                throw new DebugException(404, '父目录找不到');
+                return new Result(404, '目录不存在');
             }
 
             $current = $current['subs'][$node];
@@ -290,32 +297,6 @@ class User
         return $results;
     }
 
-    /*public function appendDownTask($from, $target, $hash)
-    {
-        if (!DbSystem::checkDownListTask($this->Account->uid, $from, $target, $hash)){
-            return '任务已存在';
-        }
-
-        $task = new Task();
-        $task->task_type = 1;
-        $task->task_display_text = '';
-        $task->task_from_path = $from;
-        $task->task_target_path = $target;
-        $task->task_owner = $this->Account->uid;
-        $task->task_total = 0;
-        $task->task_value = 0;
-        $task->task_state = 0;
-
-        try {
-            $task->save();
-            return true;
-        } catch(Exception $e) {
-            Log::record('添加下载任务异常，uid:'.$this->Account->uid.'，from:'.$from.'，target:'.$target.'，hash:'.$hash, 'warnning', 'User::appendDownTask');
-            Log::record($e->getMessage(), 'warnning', 'User::appendDownTask');
-            return '添加任务异常';
-        }
-    }*/
-
     public function appendDownTaskList($list)
     {
         $has_exception = false;
@@ -338,36 +319,25 @@ class User
 
     public function appendUploadTask($params)
     {
-        if (FileSystem::checkUserFileExists($this->Account->uid, $params['task_target_path'])){
+        if (DbSystem::checkFileExists($this->Account->uid, $params['task_target_path'])){
             throw new DisplayException(400, '文件已存在');
         }
 
         $task = DbSystem::findTaskDb([
             'task_owner' => $this->Account->uid,
-            'task_type' => 0,
+            'task_type' => self::TASK_TYPE_UPLOAD,
             'task_client_id' => $params['task_client_id'],
         ]);
 
-        if ($task == null) {
-            $task = new Task();
-            $task->task_type = 0;
-            $task->task_from_path = $params['task_from_path'];
-            $task->task_target_path = $params['task_target_path'];
-            $task->task_owner = $this->Account->uid;
-            $task->task_state = self::TASK_STATE_INITED;
-            $task->task_create_time = time();
-            $task->task_file_hash = $params['task_file_hash'];
-            $task->task_client_id = $params['task_client_id'];
-            $task->task_file_type = $params['task_file_type'];
-            $task->task_lastmodified = $params['task_lastmodified'];
+        $params['task_type'] = self::TASK_TYPE_UPLOAD;
+        $params['task_owner'] = $this->Account->uid;
+        $params['task_state'] = self::TASK_STATE_INITED;
+        $params['task_create_time'] = time();
+        $params['task_owner'] = $this->Account->uid;
 
-            try {
-                $task->save();
-            } catch(Exception $e) {
-                Log::record('添加上传任务异常，uid:'.$this->Account->uid.'，from:'.$from.'，target:'.$target.'，hash:'.$hash, 'warnning', 'User::appendDownTask');
-                Log::record($e->getMessage(), 'warnning', 'User::appendDownTask');
-                return '添加任务异常';
-            }
+        $result = DbSystem::syncTask($params);
+        if ($result instanceof Result){
+            throw new DisplayException($result->code(), $result->msg());
         }
 
         return true;
@@ -382,13 +352,31 @@ class User
         ]);
 
         if ($task == null){
-            throw new DisplayException(404, '没有找到对应的上传任务');
+            throw new DisplayException(403, '没有对应的上传任务');
         }
 
         if ($params['chunks'] > 0){
-            FileSystem::saveUploadChunk($params['task_client_id'], $params['chunk'], $params['file']);
-        }else if (FileSystem::saveSingleUnload($this->Account->uid, $task, $params['file'])){
+            $result = FileSystem::saveUploadChunk($params['task_client_id'], $params['chunk'], $params['file']);
+            if ($result instanceof Result){
+                throw new DisplayException($result->code(), $result->msg());
+            }
+        }else {
+            trace('saveSingleUnload: ' . print_r($params['file'], true), 'debug');
+            $result = FileSystem::saveSingleUnload($this->Account->uid, $task, $params['file']);
+            if ($result instanceof Result){
+                FileSystem::deleteFile($this->Account->uid, $task->task_target_path);
+                throw new DisplayException($result->code(), $result->msg());
+            }
 
+            $result = DbSystem::createFile($this->Account->uid,
+                $task->task_target_path
+                , $result
+                , $task->task_lastmodified
+                , $task->task_file_hash);
+            if ($result instanceof Result){
+                FileSystem::deleteFile($this->Account->uid, $task->task_target_path);
+                throw new DisplayException($result->code(), $result->msg());
+            }
         }
 
         return true;

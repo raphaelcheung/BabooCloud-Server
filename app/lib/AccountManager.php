@@ -18,10 +18,6 @@ class AccountManager
         return !Account::where('level', 0)->findOrEmpty()->isEmpty();
     }
 
-    public static function hasAccount($uid){
-        return !Account::where('uid', $uid)->findOrEmpty()->isEmpty();
-    }
-
     public static function createAccount($account)
     {
         //获取加密信息
@@ -35,7 +31,7 @@ class AccountManager
 
         //检测新账号的信息是否有效
 
-        if (self::hasAccount($account['uid'])){
+        if (DbSystem::checkAccountExists_ByID($account['uid'])){
             throw new DisplayException(400, '用户名已被占用');
         }
 
@@ -56,24 +52,17 @@ class AccountManager
             throw new DebugException(500, '密码无法生成散列值');
         }
 
-        $newaccount = new Account;
-        $newaccount->uid = $account['uid'];
-        $newaccount->nickname = isset($account['nickname']) ? $account['nickname'] : '';
-        $newaccount->telephone = isset($account['telephone']) ? $account['telephone'] : '';
-        $newaccount->email = isset($account['email']) ? $account['email'] : '';
-        $newaccount->level = $account['level'];
-        $newaccount->createtime = time();
-        $newaccount->salt = $salt;
-        $newaccount->password = $password;
-        $newaccount->uid_hash = $uid_hash;
-        $newaccount->account_quota = $account['account_quota'];
-
         //在保存数据前先创建硬盘目录，失败后不用回滚数据库
-        FileSystem::createRootFolder($account['uid']);
-
+        $result = FileSystem::createRootFolder($account['uid']);
+        if ($result instanceof Result){
+            throw new DisplayException($result->code(), $result->msg());
+        }
 
         //保存数据库
-        $newaccount->save();
+        $result = DbSystem::createAccount($account);
+        if ($result instanceof Result){
+            throw new DisplayException($result->code(), $result->msg());
+        }
 
         return $newaccount;
     }
@@ -85,13 +74,58 @@ class AccountManager
             $account['nickname'] = '超级管理员';
         }
 
-        return self::createAccount($account);
+        //获取加密信息
+        if (!isset($GLOBALS['salt']) || !isset($GLOBALS['secret'])){
+            throw new DebugException('没有设置加密密钥', 500);
+        }
+
+        //用户名转换成小写
+        $account['uid'] = strtolower($account['uid']);
+        $account['account_quota'] = Base::getSizeFromString(Config::get('mycloud.default_quota', '2T'));
+
+        //管理员的账号可以覆盖设置，否则如果首次安装失败则会一直无法安装
+
+        $check = new validate;
+        if (!$check->check($account)){
+            throw new DisplayException(400, $check->getError());
+        }
+
+        //对敏感信息加密
+        $uid_hash = md5($account['uid']);
+
+        $salt = Base::genRandom(4);
+        $password_md5 = md5($account['password']);
+        $password_salt = sprintf('%s%s%s', $password_md5, $salt, $GLOBALS['salt']);
+        $password = md5($password_salt);
+
+        if (!$password){
+            throw new DebugException(500, '密码无法生成散列值');
+        }
+
+        //在保存数据前先创建硬盘目录，失败后不用回滚数据库
+        $result = FileSystem::createRootFolder($account['uid']);
+        if ($result instanceof Result){
+            throw new DisplayException($result->code(), $result->msg());
+        }
+
+        $account['salt'] = $salt;
+        $account['password'] = $password;
+        $account['uid_hash'] = $uid_hash;
+
+        //创建管理员账号时允许覆盖
+        //否则，首次安装失败可能造成永久无法安装
+        $result = DbSystem::createAccount($account, true);
+        if ($result instanceof Result){
+            throw new DisplayException($result->code(), $result->msg());
+        }
+
+        return $result;
     }
 
     public static function tryLogin($user, $password)
     {
         //去数据库查找该用户
-        $account = Account::where('uid', $user)->find();
+        $account = DbSystem::findAccount_ByID($user);
         if (isset($account)){
             //组合并生成密码散列串
             $password_salt = $password . $account->salt . $GLOBALS['salt'];
@@ -153,7 +187,7 @@ class AccountManager
             if ($now < $login_expired){
                 //查找账号缓存，如没有则从数据库取
                 if (!isset(self::$account_pool[$uid])){
-                    $account = Account::where('uid', $uid)->find();
+                    $account = DbSystem::findAccount_ByID($uid);
 
                     if (isset($account)){
                         self::$account_pool[$uid] = $account;
@@ -205,7 +239,7 @@ class AccountManager
                 if ($now < $login_expired){
                     //查找账号缓存，如没有则从数据库取
                     if (!isset(self::$account_pool[$uid])){
-                        $account = Account::where('uid', $uid)->find();
+                        $account = DbSystem::findAccount_ByID($uid);
     
                         if (isset($account)){
                             self::$account_pool[$uid] = $account;

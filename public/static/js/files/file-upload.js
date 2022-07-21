@@ -1585,7 +1585,8 @@ OC.Uploader_.prototype = _.extend({
 			var upload = self._uploads_file[file.id];
 			if (!upload){
 				console.warn('找不到对应的 upload');
-				self.pauseUpload(upload);
+				//self.pauseUpload(upload.getId());
+				return;
 			}
 
 			console.log(upload.getFile().name);
@@ -1593,12 +1594,12 @@ OC.Uploader_.prototype = _.extend({
 			console.log(self._uploads_file);
 
 			//计算MD5
-			var my_result = false;
+			//var my_result = false;
 			var wait_md5_func = async function (){
 				return await self._webuploader.md5File(file).then(function(val){
-					my_result = true;
+					//my_result = true;
 					upload.setMD5(val);
-					console.log('1 MD5： ' + upload.getMD5());
+					//console.log('1 MD5： ' + upload.getMD5());
 					return true;
 				}, function(val){
 					console.warn('wrong md5: ' + val);
@@ -1607,19 +1608,19 @@ OC.Uploader_.prototype = _.extend({
 
 			};
 
-			console.log('0 MD5： ' + upload.getMD5());
+			//console.log('0 MD5： ' + upload.getMD5());
 
 			my_result = await wait_md5_func();
-			console.log('2 MD5： ' + upload.getMD5());
+			//console.log('2 MD5： ' + upload.getMD5());
 			
-			if (!my_result){
-				self.pauseUpload(upload);
-				return;
-			}
+			//if (!my_result){
+			//	self.pauseUpload(upload.getId());
+			//	return;
+			//}
 
-			console.log('3');
+			//console.log('3');
 
-			my_result = false;
+			//my_result = false;
 			//在服务器上创建对应的上传任务
 			$.ajax({
 				url: OC.filePath('task/appendupload'),
@@ -1640,7 +1641,7 @@ OC.Uploader_.prototype = _.extend({
 				success: function(data, result, response){
 					console.log('task/appendupload suc!');
 					//console.log(data);
-					my_result = true;
+					//my_result = true;
 				},
 				error: function(data, result){
 					console.log('task/appendupload failed...');
@@ -1649,12 +1650,12 @@ OC.Uploader_.prototype = _.extend({
 				},
 			});
 
-			console.log('4');
+			//console.log('4');
 
 
-			if (!my_result){
-				self.pauseUpload(upload);
-			}
+			//if (!my_result){
+			//	self.pauseUpload(upload.getId());
+			//}
 		});
 
 

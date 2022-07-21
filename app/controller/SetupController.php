@@ -79,7 +79,10 @@ class SetupController extends BaseController
             AccountManager::createSuperAdminAccount($new_account);
             
             //初始化网盘目录
-            DbSystem::createDefaultFolder($new_account['uid']);
+            $result = DbSystem::createRootFolder($new_account['uid']);
+            if ($result != true){
+
+            }
 
 
             Config::setValue(true, 'mycloud.isinited');

@@ -22,7 +22,7 @@ class File extends Model
         'file_owner'            => 'string',
         'file_hash'             => 'string',
         'file_last_scan_time'   => 'int',
-        'file_putin_time'       => 'int',
+        'file_upload_time'       => 'int',
         'file_modified'         => 'int',
     ];
 

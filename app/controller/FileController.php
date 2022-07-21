@@ -5,6 +5,8 @@ use app\BaseController;
 use app\lib\DebugException;
 use app\lib\DisplayException;
 use think\Request;
+use app\lib\Base;
+use app\lib\ValidateHelper;
 
 class FileController extends BaseController
 {
@@ -17,7 +19,8 @@ class FileController extends BaseController
     {
         //trace('File/findfolder: path=' . $path, 'debug');
 
-        $path = $this->checkPath($path);
+        $path = ValidateHelper::checkRelativePath($path);
+        $path = Base::normalizeRelativePath($path);
 
         $user = $this->_request->user;
 
@@ -28,48 +31,11 @@ class FileController extends BaseController
         return json($results, 200);
     }
 
-    private function checkPath($path)
-    {
-        //防止路径非法注入
-        if (strcmp($path, '') == 0){
-            throw new DisplayException(400, '路径非法');
-        }
-
-        if (strpos($path, '..') !== false){
-            throw new DisplayException(400, '路径非法');
-        }
-
-        if (!preg_match('/[\u4E00-\u9FA5\w\\\.\-\/]+/', $path)){
-            throw new DisplayException(400, '路径非法');
-        }
-
-        if (strncmp($path, '/', 1) != 0){
-            throw new DisplayException(400, '路径非法');
-        }
-
-        if (strncmp($path, '//', 2) == 0){
-            $path = substr($path, 2);
-        }
-
-        if (strncmp($path, '/', 1) == 0){
-            $path = substr($path, 1);
-        }
-
-        if (strlen($path) > 1){
-            //去掉末尾的 /
-            if (substr_compare($path, '/', -1) == 0){
-                $path = substr($path, 0, strlen($path) - 1);
-            }
-        }
-
-        trace('File/checkPath: output=' . $path, 'debug');
-        return $path;
-    }
-
     public function createfolder($path)
     {
         trace('File/createfolder: path=' . $path, 'debug');
-        $path = $this->checkPath($path);
+        $path = ValidateHelper::checkRelativePath($path);
+        $path = Base::normalizeRelativePath($path);
 
         if (strcmp($path, '') == 0){
             throw new DebugException(400, '不能创建根目录');
@@ -87,7 +53,8 @@ class FileController extends BaseController
     public function deletefolder($path)
     {
         trace('File/deletefolder: path=' . $path, 'debug');
-        $path = $this->checkPath($path);
+        $path = ValidateHelper::checkRelativePath($path);
+        $path = Base::normalizeRelativePath($path);
 
         if (strcmp($path, '') == 0){
             throw new DebugException(400, '不能删除根目录');
@@ -99,9 +66,9 @@ class FileController extends BaseController
         return json($path . '删除成功', 200);
     }
 
-    public function getfolder($path)
+    /*public function getfolder($path)
     {
-/*         trace('File/getfolder: path=' . $path, 'debug');
+        trace('File/getfolder: path=' . $path, 'debug');
 
         $path = $this->checkPath($path);
 
@@ -110,19 +77,9 @@ class FileController extends BaseController
         $result = $user->createFolder($path);
         trace('File/getfolder: output-result=' . print_r($result, true), 'debug');
 
-        return json([$result], 200); */
+        return json([$result], 200); 
         return 'sdafgsadfsdaf';
-    }
+    }*/
 
-    public function deletefile($filename)
-    {
-        trace('File/getfolder: path=' . $path, 'debug');
 
-        $filename = $this->checkPath($filename);
-
-        $user = $this->_request->user;
-        $user->deleteFile($filename);
-
-        return json($filename . '已成功删除', 200);
-    }
 }

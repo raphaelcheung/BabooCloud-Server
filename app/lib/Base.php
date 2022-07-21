@@ -123,7 +123,17 @@ class Base
             $path = substr($path, 0, strlen($path) - 1);
         }
 
-        return $path;
+        if ($path === ''){
+            return $path;
+        }
+
+        $parts = explode('/' , $path);
+        $result = [];
+        foreach($parts as $part){
+            $result[] = trim($part);
+        }
+
+        return implode('/', $result);
     }
 
     public static function getJsPath($input)

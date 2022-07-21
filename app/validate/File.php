@@ -22,7 +22,7 @@ class File extends Validate
         'file_owner|文件属主'        => 'require|regex:[\w]+|length:4,16',    
         'file_hash|文件Hash值'      => '',
         'file_last_scan_time|文件上一次扫描的时间' => '',
-        'file_putin_time|文件入库时间'  => 'require|number',
+        'file_upload_time|文件入库时间'  => 'require|number',
         'file_modified|文件修改时间'    => 'require|number',
     ];
 

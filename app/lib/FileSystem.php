@@ -8,18 +8,19 @@ use think\facade\Config;
 use app\lib\DebugException;
 use app\lib\DisplayException;
 use app\lib\Base;
+use app\lib\Result;
 
 class FileSystem
 {
-    public const UPLOAD_PATH = "../../runtime/upload_chunks";
+    //public const UPLOAD_PATH = "../../runtime/upload_chunks";
 
 
-    public static function getRootFolder($uid)
+    private static function getRootFolder($uid)
     {
         $root_path = Base::normalizeRelativePath(Config::get('mycloud.datapath'));
 
         if (!isset($root_path)){
-            throw new DisplayException(500, '没有设置存储目录，请正确安装服务器');
+            return new Result(500, '没有设置存储目录，请正确安装服务器');
         }
 
         $root_path = $root_path . '/' . $uid;
@@ -31,8 +32,10 @@ class FileSystem
         $root_path = FileSystem::getRootFolder($uid);
 
         if (!FileSystem::_ensurePathExists($root_path)){
-            throw new DisplayException(500, '没有存储权限');
+            return new Result(500, '没有存储权限');
         }
+
+        return true;
     }
 
     public static function deleteFile($uid, $filename)
@@ -44,21 +47,19 @@ class FileSystem
         $root_path = Config::get('mycloud.datapath');
 
         if (!isset($root_path)){
-            throw new DisplayException(400, '没有设置存储目录，请正确安装服务器');
+            return new Result(500, '没有设置存储目录，请正确安装服务器');
         }
 
         $target = $root_path . '/' . $uid . '/' . $filename;
         if (!is_file($target)){
-            throw new DisplayException(404, $filename . '：文件不存在');
-        }
-
-        if (!is_writable($target)){
-            throw new DisplayException(500, $filename . '：服务器没有该文件的操作权限，请找系统管理员协助');
+            return new Result(404, $filename . '：文件不存在');
         }
 
         if (!unlink($target)){
-            throw new DisplayException(400, $filename . '：文件');
+            return new Result(500, $filename . '：文件删除失败，没有操作权限或文件被占用');
         }
+
+        return true;
     }
 
     public static function deleteFolder($uid, $path)
@@ -70,18 +71,18 @@ class FileSystem
         $root_path = Config::get('mycloud.datapath');
 
         if (!isset($root_path)){
-            throw new DisplayException(400, '没有设置存储目录，请正确安装服务器');
+            return new Result(500, '没有设置存储目录，请正确安装服务器');
         }
 
         $target = $root_path . '/' . $uid . '/' . $path;
 
-        self::_deleteFolder($target);
+        return self::_deleteFolder($target);
     }
 
-    public static function _deleteFolder($full_path)
+    private static function _deleteFolder($full_path)
     {
         if (!is_dir($full_path)){
-            return;
+            return new Result(404, '目录不存在');
         }
 
         $subs = scandir($full_path);
@@ -92,26 +93,27 @@ class FileSystem
 
             $filename = $full_path . '/' . $sub;
             if (is_dir($filename)){
-                self::_deleteFolder($filename);
+                $result = self::_deleteFolder($filename);
+                if ($result instanceof Result){
+                    return $result;
+                }
             }else{
                 unlink($filename);
             }
         }
 
         @rmdir($full_path . '/');
+        return true;
     }
 
     public static function createFolder($uid, $path)
     {
+        if ($path === ''){
+            return new Result(400, '不能创建根目录');
+        }
+
         //路径不能是根目录
         $path_nodes = explode('/', $path);
-
-        //去掉第一个空节点
-        array_shift($path_nodes);
-
-        if (count($path_nodes) <= 0){
-            throw new DisplayException(400, '路径错误');
-        }
 
         //组合父目录完整路径
         array_pop($path_nodes);
@@ -119,23 +121,20 @@ class FileSystem
 
         $root_path = FileSystem::getRootFolder($uid);
         
-        //检查根目录是否存在
+        //检查父目录是否存在
         if (!is_dir($root_path . '/' . $parent_path)){
-            throw new DeubgException(500, '根目录不存在');
+            return new Result(404, '父目录不存在');
         }
 
-        if (is_dir($root_path . $path)){
-            throw new DisplayException(400, '文件夹已经存在');
+        if (is_dir($root_path . '/' . $path)){
+            return true;
         }
 
-        if (!mkdir($root_path . $path)){
-            throw new DisplayException(400, '没有在该路径下创建文件夹的权限');
+        if (!mkdir($root_path . '/' . $path)){
+            return new Result(500, '没有在该路径下创建文件夹的权限');
         }
-    }
 
-    public static function initUploadFolder($uid)
-    {
-
+        return true;
     }
 
     public static function saveUploadChunk($taskid, $chunk, $file)
@@ -160,7 +159,7 @@ class FileSystem
                 $path = $path . $node . '/';
                 if (!is_dir($path)){
                     if (!mkdir($path)){
-                        return false;
+                        return new Result(500, '没有权限创建目录');
                     }
                 }
             }
@@ -184,25 +183,20 @@ class FileSystem
     public static function saveSingleUnload($uid, $task, $file)
     {
         $target = FileSystem::getRootFolder($uid) . '/' . $task->task_target_path;
-        //trace('saveSingleUnload: ' . $target, 'debug');
        
         if (is_file($target)){
-            throw new DisplayException(400, '文件已存在');
+            return new Result(500, '文件已存在');
         }
 
         $tmp = \think\facade\FileSystem::putFileAs('upload_chunks', $file, $task->task_client_id);
         $tmp = \think\facade\FileSystem::path($tmp);
         
-        //trace('tmp file：' . $tmp, 'debug');
         //检验MD5
-
         $md5 = $file->md5();
-        //trace('file->md5: ' . $md5, 'debug');
-        //trace('task_file_hash: ' . $task->task_file_hash, 'debug');
 
         if (!($md5 === $task->task_file_hash)){
             unlink($tmp);
-            throw new DisplayException(400, '文件 MD5 不一致');
+            return new Result(403, '文件 MD5 不一致');
         }
 
         $path_nodes = explode('/', $target);
@@ -210,10 +204,17 @@ class FileSystem
         $dir = implode('/', $path_nodes);
         if (!FileSystem::_ensurePathExists($dir)){
             unlink($tmp);
-            throw new DisplayException(400, '无法创建目标路径');
+            return new Result(500, '无法创建目标路径');
         }
 
-        rename($tmp, $target);
-        return true;
+        $filesize = filesize($tmp);
+        if ($filesize == false){
+            return new Result(500, '无法计算文件大小');
+        }
+
+        if (!rename($tmp, $target)){
+            return new Result(500, '无法移动上传文件到目标路径');
+        }
+        return $filesize;
     }
 }
