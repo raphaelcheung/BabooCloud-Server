@@ -19,7 +19,7 @@ class FileController extends BaseController
     {
         //trace('File/findfolder: path=' . $path, 'debug');
 
-        $path = ValidateHelper::checkRelativePath($path);
+        ValidateHelper::checkRelativePath($path);
         $path = Base::normalizeRelativePath($path);
 
         $user = $this->_request->user;
@@ -34,7 +34,7 @@ class FileController extends BaseController
     public function createfolder($path)
     {
         trace('File/createfolder: path=' . $path, 'debug');
-        $path = ValidateHelper::checkRelativePath($path);
+        ValidateHelper::checkRelativePath($path);
         $path = Base::normalizeRelativePath($path);
 
         if (strcmp($path, '') == 0){
@@ -53,7 +53,7 @@ class FileController extends BaseController
     public function deletefolder($path)
     {
         trace('File/deletefolder: path=' . $path, 'debug');
-        $path = ValidateHelper::checkRelativePath($path);
+        ValidateHelper::checkRelativePath($path);
         $path = Base::normalizeRelativePath($path);
 
         if (strcmp($path, '') == 0){

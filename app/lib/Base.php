@@ -1,6 +1,7 @@
 <?php
 namespace app\lib;
 
+use Exception;
 use think\facade\Request;
 use think\facade\Config;
 
@@ -15,6 +16,28 @@ class Base
     '~'];
 
     protected static $isInit = false;
+
+    public static function explode($separator, $text)
+    {
+        if (!is_string($separator) || !is_string($text) || strlen($separator) > 1){
+            throw new Exception('参数不合规');
+        }
+
+        $result = [];
+        $tmp = '';
+        for($i = 0; $i < strlen($text); $i ++){
+            if ($text[$i] === $separator){
+                $result[] = $tmp;
+                $tmp = '';
+            }else{
+                $tmp = $tmp . $text[$i];
+            }
+        }
+
+        $result[] = $tmp;
+
+        return $result;
+    }
 
     public static function genRandom($length)
     {
@@ -115,11 +138,11 @@ class Base
     public static function normalizeRelativePath($path)
     {
         $path = str_replace('\\', '/', $path);
-        if (strpos($path, '/') == 0){
+        if (substr($path, 0, 1) === '/'){
             $path = substr($path, 1);
         }
 
-        if (strpos($path, '/') == strlen($path) - 1){
+        if (substr($path, -1) === '/'){
             $path = substr($path, 0, strlen($path) - 1);
         }
 
@@ -127,7 +150,7 @@ class Base
             return $path;
         }
 
-        $parts = explode('/' , $path);
+        $parts = self::explode('/' , $path);
         $result = [];
         foreach($parts as $part){
             $result[] = trim($part);

@@ -113,11 +113,12 @@ class DbSystem
 
     public static function findFolder($uid, $path)
     {
+        $path_nodes = Base::explode('/', $path);
+
         if ($path === ''){
             $folder_name = '';
             $parent_path = '*';
         }else if(count($path_nodes) > 1){
-            $path_nodes = explode('/', $path);
             $folder_name = array_pop($path_nodes);
             $parent_path = implode('/', $path_nodes);
         }else{
@@ -143,7 +144,7 @@ class DbSystem
 
     public static function deleteFile($uid, $filename)
     {
-        $name_nodes = explode('/', $filename);
+        $name_nodes = Base::explode('/', $filename);
         $name = array_pop($name_nodes);
 
         $parent = implode('/', $name_nodes);
@@ -250,7 +251,7 @@ class DbSystem
 
     public static function createFile($uid, $filepath, $filesize, $lastmodified, $md5)
     {
-        $parts = explode('/', $filepath);
+        $parts = Base::explode('/', $filepath);
         $filename = array_pop($parts);
         $parent = implode('/', $parts);
 
@@ -269,7 +270,7 @@ class DbSystem
         }
 
         try{
-            $parts = explode($filename, '.');
+            $parts = Base::explode('.', $filename);
             $ext = array_pop($parts);
 
             $file = new File();
@@ -320,7 +321,7 @@ class DbSystem
         if ($path === ''){
             return self::hasFolder($uid, '*', '');
         }else{
-            $parts = explode($path, '/');
+            $parts = Base::explode('/', $path);
             $folder_name = array_pop($parts);
             return self::hasFolder($uid, implode('/', $parts), $folder_name);
         }
@@ -337,7 +338,7 @@ class DbSystem
             return false;
         }
 
-        $parts = explode($filepath, '/');
+        $parts = Base::explode('/', $filepath);
         $filename = array_pop($parts);
         $parent = implode('/', $parts);
 
@@ -346,7 +347,7 @@ class DbSystem
             return false;
         }
 
-        return self::checkFileExists_($uid, $filename, $folder->folder_id);
+        return self::checkFileExists_($uid, $folder->folder_id, $filename);
     }
 
     public static function syncTask($params)

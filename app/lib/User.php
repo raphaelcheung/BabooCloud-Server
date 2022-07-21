@@ -134,7 +134,7 @@ class User
             throw new DisplayException(403, '不能创建根目录');
         }
 
-        $path_nodes = explode('/', $path);
+        $path_nodes = Base::explode('/', $path);
 
         $name = array_pop($path_nodes);
 
@@ -166,7 +166,7 @@ class User
 
     public function getFolder($path)
     {
-        $path_nodes = explode('/', $path);
+        $path_nodes = Base::explode('/', $path);
         //array_shift($path_nodes);
         $current = $this->Folders;
 

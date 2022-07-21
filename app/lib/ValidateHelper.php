@@ -64,8 +64,9 @@ class ValidateHelper
             return '不能包含特殊字符';
         }
 
-        $parts = explode('/', $path);
+        $parts = Base::explode('/', $path);
         foreach($parts as $part){
+            $part = trim($part);
             if ($part === '.' || $part === '..' || ctype_space($part)){
                 return false;
             }
@@ -105,7 +106,7 @@ class ValidateHelper
             return '不能包含特殊字符';
         }
 
-        $parts = explode('/', $path);
+        $parts = Base::explode('/', $path);
         $index = 0;
         foreach($parts as $part){
             if ($part === '.' || $part === '..'){

@@ -113,7 +113,7 @@ class FileSystem
         }
 
         //路径不能是根目录
-        $path_nodes = explode('/', $path);
+        $path_nodes = Base::explode('/', $path);
 
         //组合父目录完整路径
         array_pop($path_nodes);
@@ -153,7 +153,7 @@ class FileSystem
     private static function _ensurePathExists($path)
     {
         if (!is_dir($path)){
-            $path_nodes = explode('/', $path);
+            $path_nodes = Base::explode('/', $path);
             $path = '';
             foreach($path_nodes as $node){
                 $path = $path . $node . '/';
@@ -199,7 +199,7 @@ class FileSystem
             return new Result(403, '文件 MD5 不一致');
         }
 
-        $path_nodes = explode('/', $target);
+        $path_nodes = Base::explode('/', $target);
         array_pop($path_nodes);
         $dir = implode('/', $path_nodes);
         if (!FileSystem::_ensurePathExists($dir)){
