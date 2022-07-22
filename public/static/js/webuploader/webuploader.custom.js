@@ -3929,8 +3929,6 @@
                     promise;
     
                 if ( file ) {
-                    //me.owner.trigger( 'beforeUploadStart', file );
-
                     promise = me.request( 'before-send-file', file, function() {
     
                         // 有可能文件被skip掉了。文件被skip掉后，状态坑定不是Queued.
