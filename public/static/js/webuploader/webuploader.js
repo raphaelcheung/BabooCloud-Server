@@ -3493,41 +3493,64 @@
                 var me = this;
     
                 // 移出invalid的文件
+                //console.log('startUpload 0: ' + file.name + ', ' + me.runing);
                 $.each( me.request( 'get-files', Status.INVALID ), function() {
                     me.request( 'remove-file', this );
+                    console.log('startUpload 0 1: ' + this.name);
+
                 });
     
                 // 如果指定了开始某个文件，则只开始指定文件。
                 if ( file ) {
+                    //console.log('startUpload 1: ' + file.name);
+
                     file = file.id ? file : me.request( 'get-file', file );
     
                     if (file.getStatus() === Status.INTERRUPT) {
+                        //console.log('startUpload 1 1: ' + file.name);
                         $.each( me.pool, function( _, v ) {
-    
+                            //console.log('startUpload 1 1 1: ' + file.name + ', ' + v.name);
+                            
                             // 之前暂停过。
                             if (v.file !== file) {
                                 return;
                             }
+                            //console.log('startUpload 1 1 2: ' + file.name + ', ' + v.name);
+                            
+                            //v.transport && v.transport.send();
     
-                            v.transport && v.transport.send();
+                            v.file.setStatus( Status.QUEUED );
                         });
     
                         file.setStatus( Status.QUEUED );
                     } else if (file.getStatus() === Status.PROGRESS) {
+                        //console.log('startUpload 1 2: ' + file.name);
+
                         return;
                     } else {
+                        //console.log('startUpload 1 3: ' + file.name);
+
                         file.setStatus( Status.QUEUED );
                     }
                 } else {
+                    //console.log('startUpload 2 1');
+
                     $.each( me.request( 'get-files', [ Status.INITED ] ), function() {
+                        console.log('startUpload 2 1 1: ' + this.name);
+                        
                         this.setStatus( Status.QUEUED );
                     });
                 }
     
+                //console.log('startUpload 3: ' + file.name + ', ' + me.runing);
+
                 if ( me.runing ) {
+                    Base.nextTick( me.__tick );
                     return;
                 }
     
+                //console.log('startUpload 4: ' + file.name);
+
                 me.runing = true;
     
                 var files = [];
@@ -3535,24 +3558,35 @@
                 // 如果有暂停的，则续传
                 $.each( me.pool, function( _, v ) {
                     var file = v.file;
+                    //console.log('startUpload 4 1: ' + file.name);
     
                     if ( file.getStatus() === Status.INTERRUPT ) {
+                        //console.log('startUpload 4 2: ' + file.name);
+
                         files.push(file);
                         me._trigged = false;
                         v.transport && v.transport.send();
                     }
                 });
     
-                var file;
-                while ( (file = files.shift()) ) {
-                    file.setStatus( Status.PROGRESS );
+                var file_;
+                while ( (file_ = files.shift()) ) {
+                    file_.setStatus( Status.PROGRESS );
                 }
+
+                //console.log('startUpload 5: ' + file.name);
+
     
                 file || $.each( me.request( 'get-files',
                         Status.INTERRUPT ), function() {
+
+                    //console.log('startUpload 5 1: ' + this.name);
+
                     this.setStatus( Status.PROGRESS );
                 });
     
+                //console.log('startUpload 6: ' + file.name);
+
                 me._trigged = false;
                 Base.nextTick( me.__tick );
                 me.owner.trigger('startUpload');
@@ -3596,12 +3630,22 @@
                     }
     
                     file.setStatus( Status.INTERRUPT );
+                    //console.log('stopUpload 0');
+                    //console.log(me.pool);
+                    //console.log(me.pool.length);
                     $.each( me.pool, function( _, v ) {
     
+                        //console.log('me.pool 1');
+                        //console.log(me.pool);
+                        //console.log(v);
+
                         // 只 abort 指定的文件。
-                        if (v.file !== file) {
+                        if (v == null || v.file !== file) {
                             return;
                         }
+
+                        //console.log('me.pool 2');
+                        //console.log(file.name);
     
                         v.transport && v.transport.abort();
                         me._putback(v);
@@ -3612,6 +3656,7 @@
                 }
     
                 me.runing = false;
+
     
                 if (this._promise && this._promise.file) {
                     this._promise.file.setStatus( Status.INTERRUPT );
@@ -4079,7 +4124,15 @@
     
                 // 在发送之间可以添加字段什么的。。。
                 // 如果默认的字段不够使用，可以通过监听此事件来扩展
-                owner.trigger( 'uploadBeforeSend', block, data, headers );
+                if (!owner.trigger( 'uploadBeforeSend', block, data, headers )){
+                    // 全部上传完成。
+                    if ( file.remaning === 1 ) {
+                        me._finishFile( file, ret );
+                    } else {
+                        tr.destroy();
+                    }
+                    return;
+                }
     
                 // 开始发送。
                 tr.appendBlob( opts.fileVal, block.blob, file.name );

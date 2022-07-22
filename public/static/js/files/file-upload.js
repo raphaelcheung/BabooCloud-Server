@@ -1525,14 +1525,14 @@ OC.Uploader_.prototype = _.extend({
 						success: function(data, result, response){
 							//console.log('3: ' + file.name);
 							//服务返回的数据中包含了已经收到的文件块，存好来
-							console.log(file.name + '文件块数据：');
-							console.log(data);
+							//console.log(file.name + '文件块数据：');
+							//console.log(data);
 							upload.setChunksStatus(data);
 							deferred.resolve();
 						},
 						error: function(data, result){
 							that.owner.skipFile(file);
-							console.warn('服务器创建上传任务失败：' + file.name);
+							console.warn('服务器同步上传任务失败：' + file.name);
 							deferred.reject();
 						},
 					});
@@ -1643,105 +1643,25 @@ OC.Uploader_.prototype = _.extend({
 		
 
 		this._webuploader.on('uploadBeforeSend', function(object, data, headers) {
-			console.log('_webuploader: uploadBeforeSend');
-			console.log(object);
-			//带上身份验证信息
-
-			headers['logintoken'] = this._loginToken;
-
+			console.log('uploadBeforeSend: ' + object.chunk);
+			
 			var upload = self._uploads_file[object.file.id];
 
 			if (!upload){
 				console.warn('找不到文件对应的上传任务：' + object.name);
 			}
 
-			data['uploadid'] = upload.getId();
-			
-		});
-
-		//某个文件开始上传前触发，返回false则停止上传
-		this._webuploader.on('beforeUploadStart', async function(file) {
-			console.log('_webuploader: beforeUploadStart');
-			console.log(file);
-
-			var upload = self._uploads_file[file.id];
-			if (!upload){
-				console.warn('找不到对应的 upload');
-				//self.pauseUpload(upload.getId());
-				return;
+			//console.log('uploadBeforeSend: ' + )
+			if (upload.getChunkStatus(object.chunk) != 0){
+				console.warn('跳过已上传的文件块：' + object.chunk);
+				return false;
 			}
 
-			console.log(upload.getFile().name);
-			console.log(upload.getId());
-			console.log(self._uploads_file);
-
-			//计算MD5
-			//var my_result = false;
-			var wait_md5_func = async function (){
-				return await self._webuploader.md5File(file).then(function(val){
-					//my_result = true;
-					upload.setMD5(val);
-					//console.log('1 MD5： ' + upload.getMD5());
-					return true;
-				}, function(val){
-					console.warn('wrong md5: ' + val);
-					
-					return false;
-				});
-
-			};
-
-			//console.log('0 MD5： ' + upload.getMD5());
-
-			my_result = await wait_md5_func();
-			//console.log('2 MD5： ' + upload.getMD5());
-			
-			//if (!my_result){
-			//	self.pauseUpload(upload.getId());
-			//	return;
-			//}
-
-			//console.log('3');
-
-			//my_result = false;
-			//在服务器上创建对应的上传任务
-			$.ajax({
-				url: OC.filePath('task/appendupload'),
-				data: {},
-				type: "POST",
-				datatype: "json",
-				headers: {logintoken: self._loginToken},
-				async: false,
-				cache: false,
-				data: {
-					from: upload.getOriginalFullPath(),
-					target: upload.getTargetFullPath(),
-					filehash: upload.getMD5(),
-					type: upload.getType(),
-					lastmodified: upload.getLastModified(),
-					id: upload.getId()
-				},
-				success: function(data, result, response){
-					console.log('task/appendupload suc!');
-					//console.log(data);
-					//my_result = true;
-				},
-				error: function(data, result){
-					console.log('task/appendupload failed...');
-					//console.log(data);
-					console.warn('服务器创建上传任务失败：' + data);
-				},
-			});
-
-			//console.log('4');
-
-
-			//if (!my_result){
-			//	self.pauseUpload(upload.getId());
-			//}
+			//带上身份验证信息
+			headers['logintoken'] = this._loginToken;
+			data['uploadid'] = upload.getId();
+			return true;
 		});
-
-
 
 		return this.uploadParams;
 	},
@@ -1764,13 +1684,14 @@ OC.Uploader_.prototype = _.extend({
 
 	pauseUpload: function(id) {
 		var upload = this._uploads[id];
-		this._webuploader.stop(upload.getFile());
+		console.log('pauseUpload: ' + upload.getFile().name);
+		this._webuploader.stop(upload.getFile(), true);
 	},
 
 	pauseUploads: function() {
 		var self = this;
 		_.each(this._uploads, function(upload) {
-			self._webuploader.stop(upload.getFile());
+			self._webuploader.stop(upload.getFile(), true);
 		});
 	},
 

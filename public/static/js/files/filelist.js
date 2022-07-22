@@ -1710,7 +1710,7 @@
             delete this._reloadCall;
             this.hideMask();
 
-            console.log(datas);
+            //console.log(datas);
             if (result != 'success'){
                 this.changeDirectory('/');
 
