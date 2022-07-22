@@ -106,11 +106,12 @@ class TaskController extends BaseController
         $user = $this->_request->user;
 
         $result = $user->appendUploadTask($params);
-        if ($result != true){
-            return json($result, 400);
+
+        for($i = 0; $i < count($result); $i++){
+            $result[$i] = intval($result[$i]);
         }
 
-        return json('', 200);
+        return json($result, 200);
     }
 
     public function upload()

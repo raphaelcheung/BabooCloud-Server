@@ -339,7 +339,12 @@ class User
             throw new DisplayException(403, '该任务已失效');
         }
 
-        return true;
+        $result = FileSystem::getChunksIndies($result->task_client_id);
+        if ($result instanceof Result){
+            return [];
+        }
+
+        return $result;
     }
 
     public function upload($params)
@@ -387,6 +392,18 @@ class User
                     DbSystem::updateTaskState($task, self::TASK_STATE_BREAKDOWN);
                     throw new DisplayException(500, '文件上传失败，请重新尝试');
                 }
+            }
+
+            $result = DbSystem::createFile(
+                $this->Account->uid
+                , $task->task_target_path
+                , $result
+                , $task->task_lastmodified
+                , $task->task_file_hash);
+
+            if ($result instanceof Result){
+                FileSystem::deleteFile($this->Account->uid, $task->task_target_path);
+                throw new DisplayException($result->code(), $result->msg());
             }
 
             DbSystem::updateTaskState($task, self::TASK_STATE_COMPLETED);

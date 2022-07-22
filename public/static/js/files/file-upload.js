@@ -86,6 +86,7 @@ OC.FileUpload.prototype = {
 	 * @type String
 	 */
 	_newName: null,
+	_chunksStatus: [],
 
 	/**
 	 * Returns the unique upload id
@@ -102,6 +103,18 @@ OC.FileUpload.prototype = {
 
 	getLastModified: function(){
 		return this._file.lastModifiedDate;
+	},
+
+	setChunksStatus: function(chunks){
+		this._chunksStatus = chunks;
+	},
+
+	getChunkStatus(id){
+		if (this._chunksStatus.length > id){
+			return this._chunksStatus[id];
+		}else{
+			return 0;
+		}
 	},
 
 	getType: function(){
@@ -1465,8 +1478,8 @@ OC.Uploader_.prototype = _.extend({
 		  }, {
 			beforeSendFile: function( file ) {
 				var that = this;
-				console.log('_webuploader: beforeSendFile');
-				console.log('0: ' + file.name);
+				//console.log('_webuploader: beforeSendFile');
+				//console.log('0: ' + file.name);
 	
 				var upload = self._uploads_file[file.id];
 				if (!upload){
@@ -1479,7 +1492,7 @@ OC.Uploader_.prototype = _.extend({
 				var deferred = WebUploader.Deferred();
 				var promise = deferred.promise();
 
-				console.log('1: ' + file.name);
+				//console.log('1: ' + file.name);
 				//计算MD5
 				self._webuploader.md5File(file).then(function(val){
 					console.log('2: ' + file.name);
@@ -1510,8 +1523,11 @@ OC.Uploader_.prototype = _.extend({
 							id: upload.getId()
 						},
 						success: function(data, result, response){
-							console.log('3: ' + file.name);
-							 
+							//console.log('3: ' + file.name);
+							//服务返回的数据中包含了已经收到的文件块，存好来
+							console.log(file.name + '文件块数据：');
+							console.log(data);
+							upload.setChunksStatus(data);
 							deferred.resolve();
 						},
 						error: function(data, result){

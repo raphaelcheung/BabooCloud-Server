@@ -156,6 +156,26 @@ class FileSystem
         return $result;
     }
 
+    public static function getChunksIndies($task_client_id)
+    {
+        $chunks_dir = Base::normalizeRelativePath(
+            \think\facade\FileSystem::path('upload_chunks/' . $task_client_id));
+
+        if (!is_file($chunks_dir . '/.index')) {
+            return [];
+        }
+
+        $indies = self::_retryFileLocker(function() use($chunks_dir){
+            return @file($chunks_dir . '/.index');
+        });
+
+        if ($indies == false){
+            return new Result(500, '无法读取文件块索引');
+        }
+
+        return $indies;
+    }
+
     public static function saveUploadChunk($params)
     {
         $chunk_path = \think\facade\FileSystem::putFileAs(
@@ -182,7 +202,7 @@ class FileSystem
 
             if ($indies == false){
                 unlink($chunk_path);
-                return new Result(500, '无法写入文件块索引');
+                return new Result(500, '无法读取文件块索引');
             }
         }
 
