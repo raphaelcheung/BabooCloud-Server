@@ -382,4 +382,12 @@ class DbSystem
 
         return $task;
     }
+    public static function updateTaskState($task, $state)
+    {
+        Task::update([
+            'task_state' => $state
+        ], [
+            'task_id' => $task->task_id
+        ]);
+    }
 }

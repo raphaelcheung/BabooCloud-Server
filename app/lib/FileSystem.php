@@ -13,6 +13,9 @@ use app\lib\Result;
 class FileSystem
 {
     //public const UPLOAD_PATH = "../../runtime/upload_chunks";
+    private const UPLOAD_CHUNKSIZE = 5 * 1024 * 1024;
+    private const UPLOAD_WAITINDEX_DELAY = 100000;
+    private const UPLOAD_WAITINDEX_RETRY = 100;
 
 
     private static function getRootFolder($uid)
@@ -137,10 +140,143 @@ class FileSystem
         return true;
     }
 
-    public static function saveUploadChunk($taskid, $chunk, $file)
+    private static function _retryFileLocker($func)
     {
-        \think\facade\FileSystem::putFileAs('upload_chunks/' . $taskid, $file, strval($chunk));
-        return true;
+        $retry = 0;
+        do{
+            if ($retry > 0){
+                usleep(self::UPLOAD_WAITINDEX_DELAY);
+            }
+
+            $result = $func();
+            $retry ++;
+        }while($retry < self::UPLOAD_WAITINDEX_RETRY 
+            && $result == false);
+
+        return $result;
+    }
+
+    public static function saveUploadChunk($params)
+    {
+        $chunk_path = \think\facade\FileSystem::putFileAs(
+            'upload_chunks/' . $params['task_client_id']
+            , $params['file'], strval($params['chunk']));
+
+        $chunk_path = \think\facade\FileSystem::path($chunk_path);
+
+        //文件块所在的目录
+        $parts = Base::explode('/', $chunk_path);
+        array_pop($parts);
+        $chunks_dir = implode('/', $parts);
+
+        //将文件块编号写入索引文件
+        if (!is_file($chunks_dir . '/.index')){
+            $indies = [];
+            for($i = 0; $i < $params['chunks']; $i++){
+                $indies[] = "0\n";
+            }
+        }else{
+            $indies = self::_retryFileLocker(function() use($chunks_dir){
+                return @file($chunks_dir . '/.index');
+            });
+
+            if ($indies == false){
+                unlink($chunk_path);
+                return new Result(500, '无法写入文件块索引');
+            }
+        }
+
+        $indies[$params['chunk']] = "1\n";
+
+        if(!self::_retryFileLocker(function() use($chunks_dir, $indies){
+                return file_put_contents($chunks_dir . '/.index', implode("", $indies), LOCK_EX);
+            })){
+                self::_deleteFolder($chunks_dir);
+                return new Result(1000, '无法写入文件块索引');
+        }
+
+        return $indies;
+
+
+    }
+
+    public static function tryFinishChunks($params)
+    {
+        //确定文件块是否齐全
+        for($i = 0; $i < $params['chunks']; $i++){
+            if (!($params['indies'][$i] === "1\n")){
+                return new Result(1000, '继续接收文件块');
+            }
+        }
+
+        $chunks_dir = Base::normalizeRelativePath(
+            \think\facade\FileSystem::path('upload_chunks/' . $params['task_client_id']));
+
+
+        $target = FileSystem::getRootFolder($params['uid']) . '/' . $params['task_target_path'];
+        if (is_file($target)){
+            self::_deleteFolder($chunks_dir);
+            return new Result(500, '文件已存在');
+        }
+
+
+        //组合文件块
+        $tmp_target = fopen($chunks_dir . '/.target', 'wb');
+        if ($tmp_target == false){
+            self::_deleteFolder($chunks_dir);
+            return new Result(500, '无法打开临时文件');
+        }
+
+        for($i = 0; $i < $params['chunks']; $i++){
+            $tmp_file_from = fopen($chunks_dir . '/' . $i, 'rb');
+            $datas = fread($tmp_file_from, self::UPLOAD_CHUNKSIZE);
+            fclose($tmp_file_from);
+            fwrite($tmp_target, $datas);
+        }
+
+        fclose($tmp_target);
+
+        //校验MD5
+        if (!($params['task_file_hash'] === md5_file($chunks_dir . '/.target'))){
+            self::_deleteFolder($chunks_dir);
+            return new Result(500, '文件校验不通过');
+        }
+
+        //转存到目标路径
+        $path_nodes = Base::explode('/', $target);
+        array_pop($path_nodes);
+        $target_dir = implode('/', $path_nodes);
+        if (!FileSystem::_ensurePathExists($target_dir)){
+            self::_deleteFolder($chunks_dir);
+            return new Result(500, '无法创建目标路径');
+        }
+
+        $filesize = filesize($chunks_dir . '/.target');
+        if ($filesize == false){
+            self::_deleteFolder($chunks_dir);
+            return new Result(500, '无法计算文件大小');
+        }
+
+        if (!rename($chunks_dir . '/.target', $target)){
+            self::_deleteFolder($chunks_dir);
+            return new Result(500, '无法移动上传文件到目标路径');
+        }
+
+        self::_deleteFolder($chunks_dir);
+        return $filesize;
+    }
+
+    //组合文件块，验证MD5后放入目标路径
+    private static function _restoreChunks($uid, $chunks, $chunks_dir, $target_path, $md5)
+    {
+       
+
+
+
+
+
+
+
     }
 
     public static function ensureUserPathExists($uid, $path)
@@ -188,14 +324,16 @@ class FileSystem
             return new Result(500, '文件已存在');
         }
 
-        $tmp = \think\facade\FileSystem::putFileAs('upload_chunks', $file, $task->task_client_id);
-        $tmp = \think\facade\FileSystem::path($tmp);
+        $chunk_path = \think\facade\FileSystem::putFileAs(
+            'upload_chunks', $file, $task->task_client_id);
+
+        $chunk_path = \think\facade\FileSystem::path($chunk_path);
         
         //检验MD5
         $md5 = $file->md5();
 
         if (!($md5 === $task->task_file_hash)){
-            unlink($tmp);
+            unlink($chunk_path);
             return new Result(403, '文件 MD5 不一致');
         }
 
@@ -203,16 +341,16 @@ class FileSystem
         array_pop($path_nodes);
         $dir = implode('/', $path_nodes);
         if (!FileSystem::_ensurePathExists($dir)){
-            unlink($tmp);
+            unlink($chunk_path);
             return new Result(500, '无法创建目标路径');
         }
 
-        $filesize = filesize($tmp);
+        $filesize = filesize($chunk_path);
         if ($filesize == false){
             return new Result(500, '无法计算文件大小');
         }
 
-        if (!rename($tmp, $target)){
+        if (!rename($chunk_path, $target)){
             return new Result(500, '无法移动上传文件到目标路径');
         }
         return $filesize;

@@ -10,8 +10,9 @@ use think\facade\Log;
 class User
 {
     private const TASK_STATE_INITED = 0;
-    private const TASK_STATE_PROCESSING = 1;
+    //private const TASK_STATE_PROCESSING = 1;
     private const TASK_STATE_COMPLETED = 2;
+    private const TASK_STATE_BREAKDOWN = 3;
 
     private const TASK_TYPE_UPLOAD = 0;
     //private const TASK_TYPE_DOWNLOAD = 1;
@@ -323,12 +324,6 @@ class User
             throw new DisplayException(400, '文件已存在');
         }
 
-        $task = DbSystem::findTaskDb([
-            'task_owner' => $this->Account->uid,
-            'task_type' => self::TASK_TYPE_UPLOAD,
-            'task_client_id' => $params['task_client_id'],
-        ]);
-
         $params['task_type'] = self::TASK_TYPE_UPLOAD;
         $params['task_owner'] = $this->Account->uid;
         $params['task_state'] = self::TASK_STATE_INITED;
@@ -338,6 +333,10 @@ class User
         $result = DbSystem::syncTask($params);
         if ($result instanceof Result){
             throw new DisplayException($result->code(), $result->msg());
+        }
+
+        if ($result->task_state != self::TASK_STATE_INITED){
+            throw new DisplayException(403, '该任务已失效');
         }
 
         return true;
@@ -355,11 +354,43 @@ class User
             throw new DisplayException(403, '没有对应的上传任务');
         }
 
+        if ($task->task_state != self::TASK_STATE_INITED){
+            throw new DisplayException(403, '该任务已失效');
+        }
+
         if ($params['chunks'] > 0){
-            $result = FileSystem::saveUploadChunk($params['task_client_id'], $params['chunk'], $params['file']);
+
+            $params = array_merge($params, [
+                'task_client_id' => $task->task_client_id,
+                'task_target_path' => $task->task_target_path,
+                'uid' => $this->Account->uid,
+                'task_file_hash' => $task->task_file_hash,
+            ]);
+
+            $result = FileSystem::saveUploadChunk($params);
             if ($result instanceof Result){
-                throw new DisplayException($result->code(), $result->msg());
+                if ($result->code() == 1000){
+                    DbSystem::updateTaskState($task, self::TASK_STATE_BREAKDOWN);
+                    throw new DisplayException($result->code(), $result->msg());
+                }else{
+                    throw new DisplayException($result->code(), $result->msg());
+                }
             }
+
+            $params['indies'] = $result;
+            $result = FileSystem::tryFinishChunks($params);
+
+            if ($result instanceof Result){
+                if ($result->code() == 1000){
+                    return true;
+                }else{
+                    DbSystem::updateTaskState($task, self::TASK_STATE_BREAKDOWN);
+                    throw new DisplayException(500, '文件上传失败，请重新尝试');
+                }
+            }
+
+            DbSystem::updateTaskState($task, self::TASK_STATE_COMPLETED);
+
         }else {
             trace('saveSingleUnload: ' . print_r($params['file'], true), 'debug');
             $result = FileSystem::saveSingleUnload($this->Account->uid, $task, $params['file']);
@@ -373,10 +404,13 @@ class User
                 , $result
                 , $task->task_lastmodified
                 , $task->task_file_hash);
+
             if ($result instanceof Result){
                 FileSystem::deleteFile($this->Account->uid, $task->task_target_path);
                 throw new DisplayException($result->code(), $result->msg());
             }
+
+            DbSystem::updateTaskState($task, self::TASK_STATE_COMPLETED);
         }
 
         return true;

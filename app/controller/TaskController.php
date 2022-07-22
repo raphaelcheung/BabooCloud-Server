@@ -122,12 +122,12 @@ class TaskController extends BaseController
 
         //检查上传操作的合规性
 
-        //trace('upload: ' . print_r($post, true), 'debug');
+        trace('upload: ' . print_r($post, true), 'debug');
 
         $valid = new ValidateHelper();
         $valid->addMD5('uploadid', true);
         $valid->addRule('chunks', 'number|between:0,209716');
-        $valid->addRule('chunk', 'number|between:0,209716');
+        $valid->addRule('chunk', 'number|between:0,209716|<:chunks');
 
         if (!$valid->check($post)){
             throw new DisplayException(400, '参数错误');

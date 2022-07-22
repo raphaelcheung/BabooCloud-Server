@@ -3929,7 +3929,7 @@
                     promise;
     
                 if ( file ) {
-                    me.owner.trigger( 'beforeUploadStart', file );
+                    //me.owner.trigger( 'beforeUploadStart', file );
 
                     promise = me.request( 'before-send-file', file, function() {
     

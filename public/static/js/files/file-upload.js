@@ -1459,10 +1459,76 @@ OC.Uploader_.prototype = _.extend({
 			duplicate: false,			// 去重， 根据文件名字、文件大小和最后修改时间来生成hash Key
 		};
 
+		 // WebUploader提供的钩子（hook），在文件上传前先判断服务是否已存在这个文件
+		 WebUploader.Uploader.register({
+			'before-send-file': 'beforeSendFile' //整个文件上传前
+		  }, {
+			beforeSendFile: function( file ) {
+				var that = this;
+				console.log('_webuploader: beforeSendFile');
+				console.log('0: ' + file.name);
+	
+				var upload = self._uploads_file[file.id];
+				if (!upload){
+					that.owner.skipFile(file);
+					console.warn('找不到对应的 upload: ' + file.name);
+					return;
+				}
 
-		this._webuploader = WebUploader.create(this.uploadParams);
 
-		//绑定上传事件
+				var deferred = WebUploader.Deferred();
+				var promise = deferred.promise();
+
+				console.log('1: ' + file.name);
+				//计算MD5
+				self._webuploader.md5File(file).then(function(val){
+					console.log('2: ' + file.name);
+					upload.setMD5(val);
+					deferred.resolve();
+				}, function(){
+					console.warn('无法计算MD5: ' + file.name);
+					that.owner.skipFile(file);
+					deferred.reject();
+				});
+
+				promise.then(function(){
+					//在服务器上创建对应的上传任务
+					$.ajax({
+						url: OC.filePath('task/appendupload'),
+						data: {},
+						type: "POST",
+						datatype: "json",
+						headers: {logintoken: self._loginToken},
+						async: false,
+						cache: false,
+						data: {
+							from: upload.getOriginalFullPath(),
+							target: upload.getTargetFullPath(),
+							filehash: upload.getMD5(),
+							type: upload.getType(),
+							lastmodified: upload.getLastModified(),
+							id: upload.getId()
+						},
+						success: function(data, result, response){
+							console.log('3: ' + file.name);
+							 
+							deferred.resolve();
+						},
+						error: function(data, result){
+							that.owner.skipFile(file);
+							console.warn('服务器创建上传任务失败：' + file.name);
+							deferred.reject();
+						},
+					});
+				}, function(){
+					deferred.reject();
+				});
+
+				return promise;
+			}
+		  });
+
+		  this._webuploader = WebUploader.create(this.uploadParams);
 
 		//文件被添加之前
 		this._webuploader.on('beforeFileQueued', function(file) {
@@ -1603,6 +1669,7 @@ OC.Uploader_.prototype = _.extend({
 					return true;
 				}, function(val){
 					console.warn('wrong md5: ' + val);
+					
 					return false;
 				});
 
