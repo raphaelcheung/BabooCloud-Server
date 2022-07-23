@@ -22,10 +22,18 @@ class IndexController extends BaseController
 
         $cssfiles = [
             //base
-            "tooltip.css",
-            "jquery-ui-fixes.css",
+            //"tooltip.css",
+            //"jquery-ui-fixes.css",
+            "notifications/styles.css",
+            "jquery.ocdialog.css",
+            "files/files.css",
+            "files/upload.css",
+            "files/mobile.css",
+            "files/detailsView.css",   
+            "activity/style.css", 
+            "comments/comments.css",
+
             "vendor/jquery-ui/themes/base/jquery-ui.css",
-            "mobile.css",
             "multiselect.css",
             "fixes.css",
             "global.css",
@@ -34,48 +42,59 @@ class IndexController extends BaseController
             "icons.css",
             "header.css",
             "inputs.css",
-            "styles.css",
             "vendor/select2/select2.css",            
             
-            "jquery.ocdialog.css",
 
             //files view
-            "files/files.css",
-            "files/upload.css",
-            "files/mobile.css",
-            "files/detailsView.css",    
+
             "webuploader.css",            
         ];
 
         $jsfiles = [
             //base
             //"../../jsconfig.php",
-            
-            "vendor/jquery/dist/jquery.min.js",
-            "vendor/jquery-migrate/jquery-migrate.min.js",
-            "vendor/jquery-ui/ui/jquery-ui.custom.js",
-            "vendor/underscore/underscore.js",
-            "vendor/moment/min/moment-with-locales.js",
-            "vendor/handlebars/handlebars.js",
-            "vendor/blueimp-md5/js/md5.js",
-            "vendor/bootstrap/js/tooltip.js",
-            "vendor/backbone/backbone.js",
-            "vendor/es6-promise/es6-promise.auto.js",
-            "vendor/davclient.js/lib/client.js",
-            "vendor/clipboard/dist/clipboard.js",
-            "vendor/bowser/src/bowser.js",
 
             'js/baseinfo.js',
 
+            "files/app.js",
+            "webuploader/webuploader.js",
+
+
+            "files/file-upload.js",
+            "files/newfilemenu.js",
+            "files/jquery.fileupload.js",
+            "files/jquery-visibility.js",
+            "files/fileinfomodel.js",
+            "files/filesummary.js",
+            "files/breadcrumb.js",
+            "files/filelist.js",
+            //"files/search.js",
+            "files/tagsplugin.js",
+            "files/favoritesfilelist.js",
+            "files/detailfileinfoview.js",
+            "files/detailtabview.js",
+            "files/mainfileinfodetailview.js",
+            "files/detailsview.js",
+            "files/fileactions.js",
+            "files/fileactionsmenu.js",
+            "files/fileactionsapplicationselectmenu.js",
+            "files/files.js",
+            "files/navigation.js", 
+
+
+
+
+            "files/favoritesplugin.js",
+
             "js/jquery.ocdialog.js",
             "js/oc-dialogs.js",
-            "js/js.js",
+            //"js/js.js",
             "js/octemplate.js",
             "js/eventsource.js",
             "js/config.js",
             "search/js/search.js",
             "js/oc-requesttoken.js",
-            "js/apps.js",
+            //"js/apps.js",
             "js/mimetype.js",
             "js/mimetypelist.js",
             "vendor/snapjs/dist/latest/snap.js",
@@ -92,39 +111,17 @@ class IndexController extends BaseController
             "js/jquery.colorbox.js",
             "js/firstrunwizard.js",
 
-            "files/fileinfo.js",
-            "files/client.js",
+            //"files/fileinfo.js",
+            //"files/client.js",
 
             //files view
-            "files/app.js",
-            "webuploader/webuploader.js",
 
-            "files/file-upload.js",
-            "files/newfilemenu.js",
-            "files/jquery.fileupload.js",
-            "files/jquery-visibility.js",
-            "files/fileinfomodel.js",
-            "files/filesummary.js",
-            "files/breadcrumb.js",
-            "files/filelist.js",
-            //"files/search.js",
-            "files/favoritesfilelist.js",
-            "files/tagsplugin.js",
-            "files/favoritesplugin.js",
-            
-            "files/detailfileinfoview.js",
-            "files/detailtabview.js",
-            "files/mainfileinfodetailview.js",
-            "files/detailsview.js",
-            
+
+
+
             "vendor/handlebars/handlebars.js",
-            "files/fileactions.js",
-            "files/fileactionsmenu.js",
-            "files/fileactionsapplicationselectmenu.js",
-            "files/files.js",
-            "files/keyboardshortcuts.js",
-            "files/navigation.js", 
 
+            "files/keyboardshortcuts.js",
             "files/taskdownlist.js",
             "files/taskuplist.js",
         ];
@@ -206,6 +203,18 @@ class IndexController extends BaseController
 
         if (isset($input)){
             $params = array_merge($params, $input);
+        }
+
+        $base_dep = Base::getViewDepend();
+
+        //将附加文件路径结合访问的url组合成绝对网址
+
+        foreach($base_dep['cssfiles'] as $css){
+            $params['cssfiles'][] = $css;
+        }
+
+        foreach($base_dep['jsfiles'] as $js){
+            $params['jsfiles'][] = $js;
         }
 
         foreach($cssfiles as $css){

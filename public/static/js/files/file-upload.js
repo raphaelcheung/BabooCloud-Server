@@ -1494,15 +1494,23 @@ OC.Uploader_.prototype = _.extend({
 
 				//console.log('1: ' + file.name);
 				//计算MD5
-				self._webuploader.md5File(file).then(function(val){
-					console.log('2: ' + file.name);
-					upload.setMD5(val);
+				if (upload.getMD5() == null){
+					self._webuploader.md5File(file)
+					.progress(function(percentage){
+						self.trigger('md5Progress', upload, percentage);
+					}).then(function(val){
+						console.log('2: ' + file.name);
+						upload.setMD5(val);
+						deferred.resolve();
+					}, function(){
+						console.warn('无法计算MD5: ' + file.name);
+						that.owner.skipFile(file);
+						deferred.reject();
+					});
+				}else{
 					deferred.resolve();
-				}, function(){
-					console.warn('无法计算MD5: ' + file.name);
-					that.owner.skipFile(file);
-					deferred.reject();
-				});
+				}
+
 
 				promise.then(function(){
 					//在服务器上创建对应的上传任务
@@ -1585,7 +1593,7 @@ OC.Uploader_.prototype = _.extend({
 				return;
 			}
 
-			self.trigger('progress', upload, percentage);
+			self.trigger('uploadProgress', upload, percentage);
 		});
 
 		this._webuploader.on('uploadSuccess', function(file) {

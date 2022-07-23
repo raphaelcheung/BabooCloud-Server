@@ -101,6 +101,7 @@
             OC.Plugins.attach('OCA.Files.TaskUpList', this);
 
             this._uploader.on('statuschange', function(upload, status, statustext){
+                console.log('statuschange: ' + upload.getFile().name + ', ' + status);
                 var taskItem = self.$upTaskList.find('#taskRow_' + upload.getId());
                 
                 //更新进度状态描述
@@ -121,75 +122,79 @@
                 //更新操作按钮的状态
                 self.updateAction(taskItem, upload.getStatus());
             });
+
+            this._uploader.on('uploadProgress', function(upload, percentage){
+                //console.log()
+                var taskItem = self.$upTaskList.find('#taskRow_' + upload.getId());
+
+                var val = (percentage * 100).toFixed(2);
+
+                taskItem.find('#taskdes').text('文件上传中...' + val + '%');
+                var progress = taskItem.find('#taskprogress');
+                //progress.attr('data-loaded', val);
+                //progress.attr('data-total', 100);
+                progress.progressbar({value: parseInt(val)});
+            });
+
+            this._uploader.on('md5Progress', function(upload, percentage){
+                var taskItem = self.$upTaskList.find('#taskRow_' + upload.getId());
+                
+                var val = (percentage * 100).toFixed(2);
+                //console.log('!!!!!!!!!!');
+                console.log(parseInt(val));
+
+                taskItem.find('#taskdes').text('正在读取文件...' + val + '%');
+                var progress = taskItem.find('#taskprogress');
+                //progress.attr('data-loaded', val);
+                //progress.attr('data-total', 100);
+                progress.progressbar({value: parseInt(val)});
+            });
 		},
+
+        _showPlay: function(taskItem){
+            var item = taskItem.find('#actionPlay');
+            item.removeClass('action-pause');
+            item.addClass('action-play');
+            item.removeClass('hidden');
+
+            item = taskItem.find('#actionPlay span');
+            item.removeClass('icon-pause');
+            item.addClass('icon-play');
+            taskItem.removeClass('hidden');
+        },
+
+        _showPause: function(taskItem){
+            var item = taskItem.find('#actionPlay');
+            item.removeClass('action-play');
+            item.addClass('action-pause');
+            item.removeClass('hidden');
+
+            item = taskItem.find('#actionPlay span');
+            item.removeClass('icon-play');
+            item.addClass('icon-pause');
+        },
+
+        _hidePlayPause: function(taskItem){
+            var item = taskItem.find('#actionPlay');
+            item.addClass('hidden');
+        },
 
         updateAction: function(taskItem, status){
             switch(status){
+                case 'error':
+                case 'interrupt':
                 case 'inited':
-                    var item = taskItem.find('#actionPlay');
-                    //if (item.hasClass('action-pause')){
-                        item.removeClass('action-pause');
-                    //}
-
-                    item.addClass('action-play');
-
-                    item = taskItem.find('#actionPlay span');
-                    item.removeClass('icon-pause');
-                    item.addClass('icon-play');
+                    this._showPlay(taskItem);
                     break;
                 case 'queued':
-                    var item = taskItem.find('#actionPlay');
-                    //if (item.hasClass('action-pause')){
-                        item.removeClass('action-play');
-                    //}
-
-                    item.addClass('action-pause');
-
-                    item = taskItem.find('#actionPlay span');
-                    item.removeClass('icon-play');
-                    item.addClass('icon-pause');
-
-                    break;
                 case 'progress':
+                    this._showPause(taskItem);
                     break;
                 case 'complete':
-                    return '完成';
-                case 'interrupt':
-                    var item = taskItem.find('#actionPlay');
-                    //if (item.hasClass('action-pause')){
-                        item.removeClass('action-pause');
-                    //}
-
-                    item.addClass('action-play');
-
-                    item = taskItem.find('#actionPlay span');
-                    item.removeClass('icon-pause');
-                    item.addClass('icon-play');
-                    break;
-                case 'error':
-                    var item = taskItem.find('#actionPlay');
-                    //if (item.hasClass('action-pause')){
-                        item.removeClass('action-pause');
-                    //}
-
-                    item.addClass('action-play');
-
-                    item = taskItem.find('#actionPlay span');
-                    item.removeClass('icon-pause');
-                    item.addClass('icon-play');
+                    this._hidePlayPause(taskItem);
                     break;
                 case 'invalid':
-                    var item = taskItem.find('#actionPlay');
-                    //if (item.hasClass('action-pause')){
-                        item.removeClass('action-pause');
-                    //}
-
-                    item.addClass('action-play');
-                    item.addClass('disabled');
-
-                    item = taskItem.find('#actionPlay span');
-                    item.removeClass('icon-pause');
-                    item.addClass('icon-play');
+                    this._hidePlayPause(taskItem);
                     break;
             }
         },
@@ -203,7 +208,7 @@
                 case 'progress':
                     return '正在上传...';
                 case 'complete':
-                    return '完成';
+                    return '已完成';
                 case 'interrupt':
                     return '已暂停';
                 case 'error':
@@ -218,7 +223,7 @@
                         }
                     }
                 case 'invalid':
-                    return '该文件被限制上传';
+                    return '任务异常，请重新添加';
             }
         },
 
@@ -383,12 +388,12 @@
             td.append(desDiv);
 
             progressDiv.progressbar({value: 0});
-            progressDiv.find('.ui-progressbar-value').
+            /*progressDiv.find('.ui-progressbar-value').
                 html('<em class="label inner"><span class="desktop">'
                     + '上传中...'
                     + '</span><span class="mobile">'
                     + '...'
-                    + '</span></em>');
+                    + '</span></em>');*/
 
             progressDiv.tipsy({gravity:'n', fade:true, live:true});
             progressDiv.fadeIn();

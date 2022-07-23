@@ -829,6 +829,8 @@ html.ie8 .column-mtime .selectedActions {
     left: 0px;
     position: absolute;
     overflow: hidden;
+
+	background: #0e4d88/*{bgColorHeader}*/ url(../../../../../img/ui-bg_highlight-soft_75_cccccc_1x100.png)/*{bgImgUrlHeader}*/ 50%/*{bgHeaderXPos}*/ 50%/*{bgHeaderYPos}*/ repeat-x/*{bgHeaderRepeat}*/;
 }
 
 #taskprogress .label {
@@ -840,9 +842,10 @@ html.ie8 .column-mtime .selectedActions {
 }
 #taskprogress .label.inner {
     color:white;
-    position: absolute;
+    font-size: 12px;
     display: block;
-    width: 200px;
+    width: 100%;
+	height: 100%;
 }
 #taskprogress .label.outer {
     position: relative;

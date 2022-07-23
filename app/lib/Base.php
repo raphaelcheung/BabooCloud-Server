@@ -254,11 +254,17 @@ class Base
             "js/mimetypelist.js",
             "vendor/snapjs/dist/latest/snap.js",
             "vendor/select2/select2.js",
-            "vendor/backbone/backbone.js",
+            //"vendor/backbone/backbone.js",
             "js/oc-backbone.js",
             "js/oc-backbone-webdav.js",
             "js/placeholder.js",
             "js/jquery.avatar.js",
+            //"files_mediaviewer/files_mediaviewer_init.js",
+            "js/user.js",
+            "notifications/app.js",
+            "notifications/notification.js",
+
+
             "vendor/strengthify/jquery.strengthify.js",
             "js/setup.js",
             "files/fileinfo.js",

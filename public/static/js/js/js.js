@@ -790,7 +790,7 @@ var OC = {
 					OC.Notification.show('加载页面出现问题，将于 5 秒后重新加载');
 					setTimeout(OC.reload, 5000);
 					// only call reload once
-					self._reloadCalled = true;
+					//self._reloadCalled = true;
 				}
 			}, 100);
 		}
