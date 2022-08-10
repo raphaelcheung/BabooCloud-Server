@@ -1110,3 +1110,15 @@ fieldset.warning legend + p, fieldset.update legend + p {
         padding-top: 35px;
     }
 }
+
+div .error {
+	color: red;
+}
+
+.action.hidden {
+	visibility: hidden;
+}
+
+#taskprogress.disabled .ui-progressbar-value.ui-widget-header.ui-corner-left {
+	background: #cccccc;
+}

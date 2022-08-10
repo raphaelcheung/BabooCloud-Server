@@ -830,7 +830,7 @@ html.ie8 .column-mtime .selectedActions {
     position: absolute;
     overflow: hidden;
 
-	background: #0e4d88/*{bgColorHeader}*/ url(../../../../../img/ui-bg_highlight-soft_75_cccccc_1x100.png)/*{bgImgUrlHeader}*/ 50%/*{bgHeaderXPos}*/ 50%/*{bgHeaderYPos}*/ repeat-x/*{bgHeaderRepeat}*/;
+	background: #0e4d88/*{bgColorHeader}*/ ;
 }
 
 #taskprogress .label {

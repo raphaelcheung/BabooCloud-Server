@@ -3495,8 +3495,8 @@
                 // 移出invalid的文件
                 //console.log('startUpload 0: ' + file.name + ', ' + me.runing);
                 $.each( me.request( 'get-files', Status.INVALID ), function() {
-                    me.request( 'remove-file', this );
-                    console.log('startUpload 0 1: ' + this.name);
+                    //me.request( 'remove-file', this );
+                    //console.log('startUpload 0 1: ' + this.name);
 
                 });
     
@@ -3536,7 +3536,7 @@
                     //console.log('startUpload 2 1');
 
                     $.each( me.request( 'get-files', [ Status.INITED ] ), function() {
-                        console.log('startUpload 2 1 1: ' + this.name);
+                        //console.log('startUpload 2 1 1: ' + this.name);
                         
                         this.setStatus( Status.QUEUED );
                     });
@@ -3724,7 +3724,7 @@
             skipFile: function( file, status ) {
                 file = file.id ? file : this.request( 'get-file', file );
     
-                file.setStatus( status || Status.COMPLETE );
+                file.setStatus( status == null ? Status.COMPLETE : status );
                 file.skipped = true;
     
                 // 如果正在上传。
@@ -3877,10 +3877,14 @@
     
                         // 有可能文件被skip掉了。文件被skip掉后，状态坑定不是Queued.
                         if ( file.getStatus() === Status.PROGRESS ||
-                            file.getStatus() === Status.INTERRUPT ) {
+                            file.getStatus() === Status.INTERRUPT ||
+                            file.getStatus() === Status.CANCELLED || 
+                            file.getStatus() === Status.ERROR ||
+                            file.getStatus() === Status.INVALID ) {
                             return file;
                         }
     
+                        //console.log('0');
                         return me._finishFile( file );
                     });
     
@@ -3958,6 +3962,7 @@
                 // 如果为fail了，则跳过此分片。
                 promise.fail(function() {
                     if ( file.remaning === 1 ) {
+                        //console.log('1');
                         me._finishFile( file ).always(function() {
                             block.percentage = 1;
                             me._popBlock( block );
@@ -4102,6 +4107,7 @@
     
                     // 全部上传完成。
                     if ( file.remaning === 1 ) {
+                        //console.log('2');
                         me._finishFile( file, ret );
                     } else {
                         tr.destroy();
@@ -4127,6 +4133,7 @@
                 if (!owner.trigger( 'uploadBeforeSend', block, data, headers )){
                     // 全部上传完成。
                     if ( file.remaning === 1 ) {
+                        //console.log('3');
                         me._finishFile( file, ret );
                     } else {
                         tr.destroy();

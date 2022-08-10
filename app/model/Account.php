@@ -24,9 +24,10 @@ class Account extends Model
         'lastlogintime' => 'int',
         'createtime'    => 'int',
         'logintoken'    => 'string',
-        'tokenexpiretime' =>'int',
-        'uid_hash'    =>'string',
+        'tokenexpiretime' => 'int',
+        'uid_hash'    => 'string',
         'account_quota' => 'int',
+        'account_used' => 'int',
     ];
 
     protected $pk = 'uid';

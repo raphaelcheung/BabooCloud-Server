@@ -216,19 +216,28 @@ class FileSystem
         }
 
         return $indies;
+    }
 
+    public static function checkChunksReady($params)
+    {
+        $indies = self::getChunksIndies($params['task_client_id']);
 
+        if ($indies instanceof Result){
+            return $indies;
+        }
+
+        //确定文件块是否齐全
+        for($i = 0; $i < $params['chunks']; $i++){
+            if (!($indies[$i] === "1\n")){
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public static function tryFinishChunks($params)
     {
-        //确定文件块是否齐全
-        for($i = 0; $i < $params['chunks']; $i++){
-            if (!($params['indies'][$i] === "1\n")){
-                return new Result(1000, '继续接收文件块');
-            }
-        }
-
         $chunks_dir = Base::normalizeRelativePath(
             \think\facade\FileSystem::path('upload_chunks/' . $params['task_client_id']));
 
@@ -284,19 +293,6 @@ class FileSystem
 
         self::_deleteFolder($chunks_dir);
         return $filesize;
-    }
-
-    //组合文件块，验证MD5后放入目标路径
-    private static function _restoreChunks($uid, $chunks, $chunks_dir, $target_path, $md5)
-    {
-       
-
-
-
-
-
-
-
     }
 
     public static function ensureUserPathExists($uid, $path)

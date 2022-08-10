@@ -5,9 +5,12 @@ use app\model\Folder;
 use app\model\File;
 use app\model\Task;
 use app\model\Account;
+use app\model\Locker;
 use app\lib\DebugException;
 use app\lib\DisplayException;
 use \think\facade\Db;
+use \think\facade\PDO;
+use app\lib\Base;
 
 class DbSystem
 {
@@ -22,6 +25,9 @@ class DbSystem
     public const STATUS_MISS = 1;
     public const STATUS_LOCKED = 2;
     public const STATUS_RECYCLE = 3;
+
+    public const LOCKER_TYPE_FOLDER = 0;
+    public const LOCKER_TYPE_FILE = 1;
 
 
     public static function checkAccountExists_ByID($uid)
@@ -57,6 +63,7 @@ class DbSystem
             $account->password = $params['password'];
             $account->uid_hash = $params['uid_hash'];
             $account->account_quota = $params['account_quota'];
+            $account->account_used = 0;
             
             $account->save();
         }catch(Exception $e){
@@ -64,6 +71,16 @@ class DbSystem
         }
 
         return $account;
+    }
+
+    public static function updateUsed($account, $used)
+    {
+        try{
+            $account->account_used = intval($used);
+            $account->save();
+        }catch(Exception $e){
+            return new Result(500, '更新用户已用空间失败');
+        }
     }
 
     public static function createRootFolder($uid)
@@ -370,6 +387,7 @@ class DbSystem
             $task->task_client_id = $params['task_client_id'];
             $task->task_file_type = $params['task_file_type'];
             $task->task_lastmodified = $params['task_lastmodified'];
+            $task->task_filesize  = $params['task_filesize'];
 
             try {
                 $task->save();
@@ -382,6 +400,7 @@ class DbSystem
 
         return $task;
     }
+    
     public static function updateTaskState($task, $state)
     {
         Task::update([
@@ -389,5 +408,151 @@ class DbSystem
         ], [
             'task_id' => $task->task_id
         ]);
+    }
+
+    // 尝试锁定文件
+    // 会先检查 mc_lockers 中有没有父目录以及相同文件的锁定记录，如有则返回 false
+    // 在 mc_lockers 中创建文件锁定记录，并返回 locker_id
+    public static function tryLockFile($uid, $filepath)
+    {
+        if ($filepath === ''){
+            trace('filepath 不能为空', 'debug');
+            return false;
+        }
+
+        $paths = Base::getAllNodesPath($filepath);
+        array_pop($paths);
+
+        $params = '';
+        foreach($paths as $path){
+            if ($params === ''){
+                $params = $path;
+            }else{
+                $params = $params . '|' . $path;
+            }
+        }
+
+        if ($params === ''){
+            $result = Locker::whereOr([
+                ['locker_by' , '=', $uid],
+                ['locker_for', '=', $filepath],
+                ['locker_type', '=', self::LOCKER_TYPE_FILE]
+            ])->find();
+        }else{
+            $result = Locker::whereOr([
+                [
+                    ['locker_by' , '=', $uid],
+                    ['locker_for', '=', $params],
+                    ['locker_type', '=', self::LOCKER_TYPE_FOLDER]
+                ],
+                [
+                    ['locker_by' , '=', $uid],
+                    ['locker_for', '=', $filepath],
+                    ['locker_type', '=', self::LOCKER_TYPE_FILE]
+                ]
+            ])->find();
+        }
+
+        if ($result != null){
+            return false;
+        }
+
+        //启动事务
+        //Db::startTrans();
+
+        try{
+
+            $now = time();
+
+            $locker = new Locker();
+            $locker->locker_by = $uid;
+            $locker->locker_for = $filepath;
+            $locker->locker_type = self::LOCKER_TYPE_FILE;
+            $locker->locker_time = $now;
+
+            $locker->save();
+
+            //Db::commit();
+            return $locker->locker_id;
+        }catch(Exception $e){
+            // 回滚事务 
+            //Db::rollback();
+            trace('tryLockFile 出错：' . $filepath, 'debug');
+            trace(print_r($e, true), 'debug');
+            return false;
+        }
+    }
+
+    public static function unlockFile($locker_id)
+    {
+        Locker::destroy($locker_id);
+    }
+
+    // 尝试锁定文件
+    // 会先检查 mc_lockers 中有没有各级目录、子文件夹、子文件的锁定记录，如有则返回 false
+    // 在 mc_lockers 中创建文件锁定记录，并返回 locker_id
+    public static function tryLockFolder($uid, $folder_path)
+    {
+        if ($folder_path === ''){
+            return false;
+        }
+
+        $paths = Base::getAllNodesPath($folder_path);
+
+        $params = '';
+        foreach($paths as $path){
+            if ($params === ''){
+                $params = $path;
+            }else{
+                $params = $params . '|' . $path;
+            }
+        }
+
+        $result = Locker::whereOr([
+            [
+                ['locker_by' , '=', $uid],
+                ['locker_for', '=', $params],
+                ['locker_type', '=', self::LOCKER_TYPE_FOLDER]
+            ],
+            [
+                ['locker_by' , '=', $uid],
+                ['locker_for', 'like', $folder_path . '/%'],
+                ['locker_type', '=', self::LOCKER_TYPE_FOLDER]
+            ],
+            [
+                ['locker_by' , '=', $uid],
+                ['locker_for', 'like', $folder_path . '/%'],
+                ['locker_type', '=', self::LOCKER_TYPE_FILE]
+            ]
+        ])->find();
+
+        if ($result != null){
+            return false;
+        }
+
+        //启动事务
+        //Db::startTrans();
+
+        try{
+
+            $now = time();
+
+            $locker = new Locker();
+            $locker->locker_by = $uid;
+            $locker->locker_for = $folder_path;
+            $locker->locker_type = self::LOCKER_TYPE_FOLDER;
+            $locker->locker_time = $now;
+
+            $locker->save();
+
+            //Db::commit();
+            return $locker->locker_id;
+        }catch(Exception $e){
+            // 回滚事务 
+            //Db::rollback();
+            trace('tryLockFile 出错：' . $folder_path, 'debug');
+            trace(print_r($e, true), 'debug');
+            return false;
+        }
     }
 }

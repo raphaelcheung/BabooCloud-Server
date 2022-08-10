@@ -101,14 +101,28 @@
             OC.Plugins.attach('OCA.Files.TaskUpList', this);
 
             this._uploader.on('statuschange', function(upload, status, statustext){
-                console.log('statuschange: ' + upload.getFile().name + ', ' + status);
+                console.log('statuschange: ' + upload.getFile().name + ', ' + status + '，' + statustext);
                 var taskItem = self.$upTaskList.find('#taskRow_' + upload.getId());
                 
                 //更新进度状态描述
-                taskItem.find('#taskdes').text(self.translateStatus(status, statustext));
-
+                self._refreshStatus(taskItem, status, statustext);
                 //更新操作按钮的状态
                 self.updateAction(taskItem, status);
+            });
+
+            this._uploader.on('invalid', function(upload){
+                console.log('invalid');
+                
+                var taskItem = self.$upTaskList.find('#taskRow_' + upload.getId());
+                
+                //更新进度状态描述
+
+                self._refreshStatus(taskItem, upload.getStatus(), upload.getStatusText());
+                self._refreshProgress(taskItem, upload.getStatus());
+
+
+                //更新操作按钮的状态
+                self.updateAction(taskItem, upload.getStatus());
             });
 
             this._uploader.on('error', function(upload){
@@ -117,57 +131,120 @@
                 var taskItem = self.$upTaskList.find('#taskRow_' + upload.getId());
                 
                 //更新进度状态描述
-                taskItem.find('#taskdes').text(self.translateStatus(upload.getStatus(), upload.getStatusText()));
+
+                self._refreshStatus(taskItem, upload.getStatus(), upload.getStatusText());
+
+                self._refreshProgress(taskItem, upload.getStatus());
+
 
                 //更新操作按钮的状态
                 self.updateAction(taskItem, upload.getStatus());
             });
 
             this._uploader.on('uploadProgress', function(upload, percentage){
-                //console.log()
                 var taskItem = self.$upTaskList.find('#taskRow_' + upload.getId());
 
-                var val = (percentage * 100).toFixed(2);
 
-                taskItem.find('#taskdes').text('文件上传中...' + val + '%');
-                var progress = taskItem.find('#taskprogress');
-                //progress.attr('data-loaded', val);
-                //progress.attr('data-total', 100);
-                progress.progressbar({value: parseInt(val)});
+                var desItem = taskItem.find('.taskdesc');
+                desItem.text('文件上传中...' + percentage + '%');
+
+                self._refreshProgress(taskItem, upload.getStatus(), parseInt(percentage));
+
+                desItem.toggleClass('error', false);
+
             });
 
             this._uploader.on('md5Progress', function(upload, percentage){
                 var taskItem = self.$upTaskList.find('#taskRow_' + upload.getId());
-                
-                var val = (percentage * 100).toFixed(2);
-                //console.log('!!!!!!!!!!');
-                console.log(parseInt(val));
 
-                taskItem.find('#taskdes').text('正在读取文件...' + val + '%');
-                var progress = taskItem.find('#taskprogress');
-                //progress.attr('data-loaded', val);
-                //progress.attr('data-total', 100);
-                progress.progressbar({value: parseInt(val)});
+                var desItem = taskItem.find('.taskdesc');
+
+                desItem.text('正在读取文件...' + percentage + '%');
+
+                self._refreshProgress(taskItem, upload.getStatus(), parseInt(percentage));
+
+
+                desItem.toggleClass('error', false);
+            });
+
+            this._uploader.on('success', function(upload){
+                console.log('success');
+                var taskItem = self.$upTaskList.find('#taskRow_' + upload.getId());
+
+                taskItem.find('.taskdesc').text('已完成');
+                self._refreshProgress(taskItem, upload.getStatus(), 100);
+
+                self._hidePlayPause(taskItem);
+
+            });
+
+            this._uploader.on('remove', function(upload){
+                console.log('remove');
+
+                var taskItem = self.$upTaskList.find('#taskRow_' + upload.getId());
+
+
+                taskItem.remove();
+
             });
 		},
 
+        _refreshProgress: function(taskItem, status, val){
+            switch(status){
+                case 'inited':
+                case 'queued':
+                case 'progress':
+                case 'complete':
+
+                    this._showProgress(taskItem, val);
+                    break;
+
+                case 'interrupt':
+                    this._showProgress(taskItem);
+                    break;
+
+                case 'invalid':
+                case 'error':
+                case 'cancelled':
+                    this._disableProgress(taskItem);
+                    break;
+            }
+        },
+
+        _showProgress: function(taskItem, val){
+            console.log('_showProgress');
+            var progress = taskItem.find('#taskprogress');
+            if (val != null){
+                progress.progressbar({value: val});
+            }
+            progress.toggleClass('disabled', false);
+        },
+
+        _disableProgress: function(taskItem){
+            console.log('_disableProgress');
+
+            var progress = taskItem.find('#taskprogress');
+            progress.progressbar({value: false});
+            progress.toggleClass('disabled', true);
+        },
         _showPlay: function(taskItem){
             var item = taskItem.find('#actionPlay');
             item.removeClass('action-pause');
             item.addClass('action-play');
-            item.removeClass('hidden');
+            item.toggleClass('hidden', false);
 
             item = taskItem.find('#actionPlay span');
             item.removeClass('icon-pause');
             item.addClass('icon-play');
-            taskItem.removeClass('hidden');
         },
 
         _showPause: function(taskItem){
             var item = taskItem.find('#actionPlay');
             item.removeClass('action-play');
             item.addClass('action-pause');
-            item.removeClass('hidden');
+
+            item.toggleClass('hidden', false);
+
 
             item = taskItem.find('#actionPlay span');
             item.removeClass('icon-play');
@@ -176,7 +253,7 @@
 
         _hidePlayPause: function(taskItem){
             var item = taskItem.find('#actionPlay');
-            item.addClass('hidden');
+            item.toggleClass('hidden', true);
         },
 
         updateAction: function(taskItem, status){
@@ -199,31 +276,56 @@
             }
         },
 
-        translateStatus: function(status, statustext){
+        _refreshStatus: function(taskItem, status, statustext){
+
+            var descItem = taskItem.find('.taskdesc');
             switch(status){
                 case 'inited':
-                    return '已添加';
+                    descItem.text('已添加');
+                    descItem.toggleClass('error', false);
+                    break;
+
                 case 'queued':
-                    return '排队等待中...';
+                    descItem.text('排队等待中...');
+                    descItem.toggleClass('error', false);
+                    break;
+
                 case 'progress':
-                    return '正在上传...';
+                    descItem.text('正在上传...');
+                    descItem.toggleClass('error', false);
+                    break;
+
                 case 'complete':
-                    return '已完成';
+                    descItem.text('已完成');
+                    descItem.toggleClass('error', false);
+                    break;
+
                 case 'interrupt':
-                    return '已暂停';
+                    descItem.text('已暂停');
+                    descItem.toggleClass('error', false);
+                    break;
+
+                case 'invalid':
                 case 'error':
                     {
                         switch(statustext){
                             case 'http':
-                                return '请求失败，请稍候重试...';
+                                descItem.text('请求失败，请稍候重试...');
+                                break;
                             case 'abort':
-                                return '已取消';
+                                descItem.text('已取消');
+                                break;
                             case 'server':
-                                return '服务器异常，请稍候重试...';
+                                descItem.text('服务器异常，请稍候重试');
+                                break;
+                            default: 
+                                descItem.text(statustext);
+                                break;
                         }
+                        descItem.toggleClass('error', true);
                     }
-                case 'invalid':
-                    return '任务异常，请重新添加';
+
+                    break;
             }
         },
 
@@ -384,7 +486,7 @@
             td.append(progressDiv);
 
             //进度描述
-            var desDiv = $('<div id="taskdes">' + this.translateStatus(taskData.status, taskData.statustext) +'</div>');
+            var desDiv = $('<div class="taskdesc"></div>');
             td.append(desDiv);
 
             progressDiv.progressbar({value: 0});
@@ -412,8 +514,6 @@
             tr.append(td);
 
             actionPlay.on('click', function(){
-                console.log('actionPlay.onclick');
-                //console.log(taskId);
                 if (actionPlay.hasClass('action-play')){
                     self._uploader.startUpload(taskId);
                 } else {
@@ -421,6 +521,14 @@
                 }
             });
 
+            actionCancel.on('click', function(){
+                self._uploader.cancelUpload(taskId);
+            });
+
+            console.log(taskData.status);
+
+            this._refreshProgress(tr, taskData.status, 0);
+            this._refreshStatus(tr, taskData.status, taskData.statustext)
             this.updateAction(tr, taskData.status);
             return tr;
 		},

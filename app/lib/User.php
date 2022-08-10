@@ -100,6 +100,11 @@ class User
         return $result;
     }
 
+    public function checkSpace($add)
+    {
+        return $this->Account->account_quota > ($this->Account->account_used + $add);
+    }
+
     private function fillFolderResult($folder)
     {
         return \array_merge(self::FILERESULT_TEMPLATE, [
@@ -360,7 +365,7 @@ class User
         }
 
         if ($task->task_state != self::TASK_STATE_INITED){
-            throw new DisplayException(403, '该任务已失效');
+            throw new DisplayException(403, '任务已失效');
         }
 
         if ($params['chunks'] > 0){
@@ -381,17 +386,21 @@ class User
                     throw new DisplayException($result->code(), $result->msg());
                 }
             }
+        }else {
+            trace('saveSingleUnload: ' . print_r($params['file'], true), 'debug');
+            
+            //锁定文件
 
-            $params['indies'] = $result;
-            $result = FileSystem::tryFinishChunks($params);
-
+            $locker_id = DbSystem::tryLockFile($this->Account->uid, $task->task_target_path);
+            if ($locker_id == false){
+                throw new DisplayException(500, '上传路径被锁定，请重新尝试');
+            }
+            
+            $result = FileSystem::saveSingleUnload($this->Account->uid, $task, $params['file']);
             if ($result instanceof Result){
-                if ($result->code() == 1000){
-                    return true;
-                }else{
-                    DbSystem::updateTaskState($task, self::TASK_STATE_BREAKDOWN);
-                    throw new DisplayException(500, '文件上传失败，请重新尝试');
-                }
+                FileSystem::deleteFile($this->Account->uid, $task->task_target_path);
+                DbSystem::unlockFile($locker_id);
+                throw new DisplayException($result->code(), $result->msg());
             }
 
             $result = DbSystem::createFile(
@@ -403,33 +412,85 @@ class User
 
             if ($result instanceof Result){
                 FileSystem::deleteFile($this->Account->uid, $task->task_target_path);
+                DbSystem::unlockFile($locker_id);
                 throw new DisplayException($result->code(), $result->msg());
             }
 
             DbSystem::updateTaskState($task, self::TASK_STATE_COMPLETED);
+            DbSystem::unlockFile($locker_id);
+        }
 
-        }else {
-            trace('saveSingleUnload: ' . print_r($params['file'], true), 'debug');
-            $result = FileSystem::saveSingleUnload($this->Account->uid, $task, $params['file']);
-            if ($result instanceof Result){
-                FileSystem::deleteFile($this->Account->uid, $task->task_target_path);
-                throw new DisplayException($result->code(), $result->msg());
+        return true;
+    }
+
+    public function doneUpload($params)
+    {
+        $task = DbSystem::findTaskDb([
+            'task_owner' => $this->Account->uid,
+            'task_type' => 0,
+            'task_client_id' => $params['task_client_id'],
+        ]);
+
+        if ($task == null){
+            throw new DisplayException(403, '没有对应的上传任务');
+        }
+
+        if ($task->task_state != self::TASK_STATE_INITED){
+            throw new DisplayException(403, '任务已失效');
+        }
+
+        if ($params['chunks'] > 0){
+            $params = array_merge($params, [
+                'task_target_path' => $task->task_target_path,
+                'uid' => $this->Account->uid,
+                'task_file_hash' => $task->task_file_hash,
+            ]);
+
+            //检验上传的文件块是否齐全
+            if (!FileSystem::checkChunksReady($params, $result)){
+                throw new DisplayException(403, '文件上传不全');
             }
 
-            $result = DbSystem::createFile($this->Account->uid,
-                $task->task_target_path
+            //锁定文件
+
+            $locker_id = DbSystem::tryLockFile($this->Account->uid, $task->task_target_path);
+            if ($locker_id == false){
+                throw new DisplayException(403, '上传路径被锁定，请重新尝试');
+            }
+
+            //拼合文件块
+
+            $result = FileSystem::tryFinishChunks($params);
+
+            if ($result instanceof Result){
+
+                DbSystem::updateTaskState($task, self::TASK_STATE_BREAKDOWN);
+                DbSystem::unlockFile($locker_id);
+                throw new DisplayException(400, $result->msg());
+            }
+
+            //建立 mysql 索引
+            $result = DbSystem::createFile(
+                $this->Account->uid
+                , $task->task_target_path
                 , $result
                 , $task->task_lastmodified
                 , $task->task_file_hash);
 
             if ($result instanceof Result){
                 FileSystem::deleteFile($this->Account->uid, $task->task_target_path);
+                DbSystem::unlockFile($locker_id);
                 throw new DisplayException($result->code(), $result->msg());
             }
 
             DbSystem::updateTaskState($task, self::TASK_STATE_COMPLETED);
+            
+            //解锁
+            DbSystem::unlockFile($locker_id);
+        }else{
+            if ($task->task_state != self::TASK_STATE_COMPLETED){
+                throw new DisplayException(400, '上传未完成');
+            }
         }
-
-        return true;
     }
 }

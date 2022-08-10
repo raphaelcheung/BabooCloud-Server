@@ -175,7 +175,7 @@ class ValidateHelper
     {
         $result = $this->_Validator->check($data);
         if(!$result){
-            return $this->_Validator->getError();
+            return false;
         }
 
         foreach($this->_ExtRules as $rule){

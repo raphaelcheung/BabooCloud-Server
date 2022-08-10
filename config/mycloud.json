@@ -1,1 +1,17 @@
-{"isinited":"1","default_quota":"2T","version":[0,0,88],"secret":"1JP<4Y`<~9VIJNjtsPzqtDiR-mP'=Hs0z)|o~T)}iDVAo\"^}","salt":"!p:=eU9Y}lVl04Fs~?bz`Z2F%-fFf?^M","datapath":"e:\/data\/","base":{"name":"\u5df4\u5e03\u4e91","title":"BabooCloud","slogan":"\u60a8\u7684\u79c1\u6709\u8d44\u6e90\u7ba1\u7406\u4e13\u5bb6"}}
+{
+    "isinited": "1",
+    "default_quota": "2T",
+    "version": [
+        0,
+        0,
+        89
+    ],
+    "secret": "1JP<4Y`<~9VIJNjtsPzqtDiR-mP'=Hs0z)|o~T)}iDVAo\"^}",
+    "salt": "!p:=eU9Y}lVl04Fs~?bz`Z2F%-fFf?^M",
+    "datapath": "e:\/data\/",
+    "base": {
+        "name": "\u5df4\u5e03\u4e91",
+        "title": "BabooCloud",
+        "slogan": "\u60a8\u7684\u79c1\u6709\u8d44\u6e90\u7ba1\u7406\u4e13\u5bb6"
+    }
+}

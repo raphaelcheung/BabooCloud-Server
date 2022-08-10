@@ -76,6 +76,11 @@ class TaskController extends BaseController
         return json('', 200);
     }
 
+    public function closetask($id)
+    {
+
+    }
+
     public function appendupload()
     {
         $post = $this->_request->post();
@@ -89,10 +94,18 @@ class TaskController extends BaseController
         $valid->addMD5('id', true);
         $valid->addMD5('filehash', true);
         $valid->addRelativeFilePath('target', true);
+        $valid->addRule('size', 'number|>:0', true);
 
-        if (!$valid->check($post)){
+        if ($valid->check($post) != true){
             throw new DisplayException(400, '参数错误');
         }
+
+        $user = $this->_request->user;
+
+        if (!$user->checkSpace(intval($post['size']))){
+            throw new DisplayException(403, '云盘空间不足');
+        }
+
 
         $params = [
             'task_client_id' => $post['id'],
@@ -101,9 +114,9 @@ class TaskController extends BaseController
             'task_file_hash' => $post['filehash'],
             'task_file_type' => intval($post['type']),
             'task_lastmodified' => intval($post['lastmodified']),
+            'task_filesize' => intval($post['size']),
         ];
 
-        $user = $this->_request->user;
 
         $result = $user->appendUploadTask($params);
 
@@ -129,9 +142,16 @@ class TaskController extends BaseController
         $valid->addMD5('uploadid', true);
         $valid->addRule('chunks', 'number|between:0,209716');
         $valid->addRule('chunk', 'number|between:0,209716|<:chunks');
+        $valid->addRule('size', 'number|between:0,1099511627776');
 
         if (!$valid->check($post)){
             throw new DisplayException(400, '参数错误');
+        }
+
+        $user = $this->_request->user;
+
+        if (!$user->checkSpace(intval($post['size']))){
+            throw new DisplayException(403, '云盘空间不足');
         }
 
         $params = [
@@ -147,7 +167,6 @@ class TaskController extends BaseController
 
         $params['file'] = $file['file'];
 
-        $user = $this->_request->user;
 
         $result = $user->upload($params);
         if ($result != true){
@@ -155,5 +174,33 @@ class TaskController extends BaseController
         }
 
         return json('', 200);
+    }
+
+    public function uploaddone($id, $chunks)
+    {
+        if (!$this->_request->isGet()){
+            throw new DisplayException(400, '非法请求');
+        }
+
+        $params = [
+            'task_client_id' => $id,
+        ];
+
+        if ($chunks != null && intval($chunks) > 0){
+            $params['chunks'] = intval($chunks);
+        }
+
+        $valid = new ValidateHelper();
+        $valid->addMD5('task_client_id', true);
+        $valid->addRule('chunks', 'number|between:0,209716', true);
+
+
+        if (!$valid->check($params)){
+            throw new DisplayException(400, '参数错误');
+        }
+
+        $user = $this->_request->user;
+        $user->doneUpload($params);
+        return json('上传成功', 200);
     }
 }

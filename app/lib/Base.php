@@ -60,6 +60,29 @@ class Base
         return $result;
     }
 
+    //生成所有父路径放进一个数组中
+    //例如：输入路径为 aaa/bbb/ccc/ddd
+    //输出：[
+    //      ["name" => "ddd", "parent" => "aaa/bbb/ccc"],
+    //      ["name" => "ccc", "parent" => "aaa/bbb"], 
+    //      ["name" => "bbb", "parent" => "aaa"], 
+    //      ["name" => "aaa", "parent" => ""]
+    //      ]
+    public static function getAllNodesPath($path){
+        $result = [];
+        $parts = self::explode('/', $path);
+
+        while(count($parts) > 0){
+            $name = array_pop($parts);
+            $result[] = [
+                "name" => $name,
+                "parent" => implode('/', $parts),
+            ];
+        };
+
+        return $result;
+    }
+
     public static function getFilesViewDepend()
     {
         $tmp = [];
