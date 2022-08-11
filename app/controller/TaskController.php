@@ -28,11 +28,11 @@ class TaskController extends BaseController
             throw new DisplayException(400, '参数错误');
         }
 
-        trace('Task/getdownloadlist', 'debug');
+        //trace('Task/getdownloadlist', 'debug');
         $user = $this->_request->user;
 
         $results = $user->getDownloadList($pageid);
-        trace('Task/getdownloadlist: output-result=' . print_r($results, true), 'debug');
+        //trace('Task/getdownloadlist: output-result=' . print_r($results, true), 'debug');
 
         return json($results, 200);
     }
@@ -136,7 +136,7 @@ class TaskController extends BaseController
 
         //检查上传操作的合规性
 
-        trace('upload: ' . print_r($post, true), 'debug');
+        //trace('upload: ' . print_r($post, true), 'debug');
 
         $valid = new ValidateHelper();
         $valid->addMD5('uploadid', true);

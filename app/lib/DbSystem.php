@@ -433,7 +433,7 @@ class DbSystem
         }
 
         if ($params === ''){
-            $result = Locker::whereOr([
+            $result = Locker::where([
                 ['locker_by' , '=', $uid],
                 ['locker_for', '=', $filepath],
                 ['locker_type', '=', self::LOCKER_TYPE_FILE]

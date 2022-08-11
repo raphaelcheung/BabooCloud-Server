@@ -194,9 +194,12 @@
                 case 'inited':
                 case 'queued':
                 case 'progress':
+                    this._showProgress(taskItem, val);
+                    break;
+
                 case 'complete':
 
-                    this._showProgress(taskItem, val);
+                    this._showProgress(taskItem, 100);
                     break;
 
                 case 'interrupt':
@@ -317,6 +320,9 @@
                                 break;
                             case 'server':
                                 descItem.text('服务器异常，请稍候重试');
+                                break;
+                            case 'timeout':
+                                descItem.text('连接超时，请稍候重试');
                                 break;
                             default: 
                                 descItem.text(statustext);
@@ -598,7 +604,7 @@
 
             var index = this.$indexLastPage + 1;
 
-            var datas = this._uploader.getUploads(index * 20, (index + 1) * 20);
+            var datas = this._uploader.getUploads(index * 20, (index + 1) * 20 - 1);
             
             //console.log('loadNextPage: ' + index);
             //console.log(datas);

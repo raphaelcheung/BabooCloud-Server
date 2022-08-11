@@ -1475,7 +1475,7 @@ OC.Uploader_.prototype = _.extend({
 		}
 
 		this.uploadParams = {
-			auto: false,
+			auto: true,
 			swf: './Uploader.swf',
 			server: '/task/upload',
 			resize: false,
@@ -1484,7 +1484,7 @@ OC.Uploader_.prototype = _.extend({
 			// 分片大小
 			chunkSize: options.maxChunkSize ? options.maxChunkSize : 5 * 1024 * 1024,	
 			
-			threads: 5,
+			threads: 1,
 			fileNumLimit: 10000, 			// 限制文件上传个数
 			methods: 'POST',
 			duplicate: false,			// 去重， 根据文件名字、文件大小和最后修改时间来生成hash Key
@@ -1524,6 +1524,7 @@ OC.Uploader_.prototype = _.extend({
 					error: function(data, result){
 						file.setStatus('error', data.responseJSON + '，请重新添加任务');
 						console.warn('上传完成时出错：' + data.responseJSON);
+						console.warn(data);
 						deferred.reject();
 					},
 				});
@@ -1548,7 +1549,8 @@ OC.Uploader_.prototype = _.extend({
 				if (upload.getMD5() == null){
 					self._webuploader.md5File(file)
 					.progress(function(percentage){
-						self.trigger('md5Progress', upload, percentage);
+
+						self.trigger('md5Progress', upload, (percentage * 100).toFixed(2));
 					}).then(function(val){
 						upload.setMD5(val);
 						deferred.resolve();
@@ -1600,6 +1602,7 @@ OC.Uploader_.prototype = _.extend({
 
 							//file.setStatus('error', '无法在服务器创建上传任务，请重试');
 							console.warn('服务器添加上传任务失败：' + file.name);
+							console.warn(data);
 							deferred.reject();
 						},
 					});
@@ -1629,8 +1632,10 @@ OC.Uploader_.prototype = _.extend({
 		//当文件被添加进队列
 		this._webuploader.on('fileQueued', function(file) {
 			var upload = new OC.FileUpload(self, file, self._targetDir, '');
-			self._uploads[upload.id] = upload;
+			self._uploads[upload.getId()] = upload;
+
 			self._uploads_order.push(upload);
+			
 			self._uploads_file[file.id] = upload;
 
 			file.on('statuschange', function(status, prevStatus){
@@ -1652,7 +1657,7 @@ OC.Uploader_.prototype = _.extend({
 				return;
 			}
 
-			self.trigger('uploadProgress', upload, percentage);
+			self.trigger('uploadProgress', upload, (percentage * 100).toFixed(2));
 		});
 
 		this._webuploader.on('uploadSuccess', function(file) {
@@ -1703,6 +1708,22 @@ OC.Uploader_.prototype = _.extend({
 			if (!upload){
 				console.warn('找不到文件对应的上传任务：' + file.name);
 				return;
+			}
+
+			self._uploads[upload.getId()] = null;
+			self._uploads_file[file.id] = null;
+	
+			Array.prototype.indexOf = function(val) { 
+				for (var i = 0; i < this.length; i++) { 
+					if (this[i].id == upload.getId()) return i; 
+				} 
+				return -1; 
+			};
+	
+			var idx = self._uploads_order.indexOf(upload.getId());
+
+			if (idx > -1){
+				self._uploads_order.splice(idx, 1); 
 			}
 
 			self.trigger('remove', upload);
@@ -1776,22 +1797,10 @@ OC.Uploader_.prototype = _.extend({
 
 
 	cancelUpload: function(id) {
+		console.log('cancelUpload：' + id);
+
 		var upload = this._uploads[id];
-		this._uploads[id] = null;
-		this._uploads_file[md5(upload.getFile())] = null;
 
-		Array.prototype.indexOf = function(val) { 
-			for (var i = 0; i < this.length; i++) { 
-				if (this[i].id == val) return i; 
-			} 
-			return -1; 
-		};
-
-		var idx = this._uploads_order.indexOf(upload.id);
-		console.log(idx);
-		if (idx > -1){
-			this._uploads_order.splice(idx, 1); 
-		}
 
 		this._webuploader.cancelFile(upload.getFile());
 
@@ -1813,15 +1822,6 @@ OC.Uploader_.prototype = _.extend({
 		_.defer(function() {
 			self.onAutorename(fileUpload);
 		});
-	},
-
-	cancelUploads: function() {
-		//this.log('取消所有上传任务');
-		jQuery.each(this._uploads, function(i, upload) {
-			upload.cancelUpload();
-		});
-
-		this.clear();
 	},
 
 	clear: function() {
@@ -1907,6 +1907,7 @@ OC.Uploader_.prototype = _.extend({
 	},
 
 	getUploads: function(start, end) {
+		//console.log('getUploads：' + start + '，' + end);
 		var len = this._uploads_order.length;
 		if (start >= len) {
 			return [];

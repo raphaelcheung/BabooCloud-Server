@@ -226,6 +226,10 @@ class FileSystem
             return $indies;
         }
 
+        if ($params['chunks'] > count($indies)){
+            return false;
+        }
+
         //确定文件块是否齐全
         for($i = 0; $i < $params['chunks']; $i++){
             if (!($indies[$i] === "1\n")){
@@ -245,6 +249,7 @@ class FileSystem
         $target = FileSystem::getRootFolder($params['uid']) . '/' . $params['task_target_path'];
         if (is_file($target)){
             self::_deleteFolder($chunks_dir);
+            trace('文件已存在：' . $target, 'debug');
             return new Result(500, '文件已存在');
         }
 
@@ -337,7 +342,8 @@ class FileSystem
         $target = FileSystem::getRootFolder($uid) . '/' . $task->task_target_path;
        
         if (is_file($target)){
-            return new Result(500, '文件已存在');
+            trace('文件已存在：' . $target, 'debug');
+            return new Result(520, '文件已存在');
         }
 
         $chunk_path = \think\facade\FileSystem::putFileAs(
