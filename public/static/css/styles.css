@@ -142,23 +142,41 @@ a.two-factor-cancel {
 #app-navigation+#app-content #controls {
 	left: 250px;
 }
+
+#app-navigation+#app-content div .bar {
+	display: flex;
+	height: 44px;
+	margin-left: 0px;
+}
+
 .viewer-mode #app-navigation+#app-content #controls {
 	left: 0;
 }
 
+
+
 #controls .button,
+#app-content div .bar .button,
 #controls button,
+#app-content div .bar button,
 #controls input[type='submit'],
+#app-content div .bar input[type='submit'],
 #controls input[type='text'],
+#app-content div .bar input[type='text'],
 #controls input[type='password'],
-#controls select {
+#app-content div .bar input[type='password'],
+#controls select,
+#app-content div .bar select {
+
 	box-sizing: border-box;
 	display: inline-block;
 	height: 36px;
 	padding: 7px 10px
 }
 
-#controls .button.hidden {
+#controls .button.hidden,
+#app-content div .bar .button.hidden {
+	
 	display: none;
 }
 
@@ -1121,4 +1139,57 @@ div .error {
 
 #taskprogress.disabled .ui-progressbar-value.ui-widget-header.ui-corner-left {
 	background: #cccccc;
+}
+
+#app-content div .bar {
+	box-sizing: border-box;
+	padding: 4px;
+	right:0px;
+	width:100%;
+	margin:0;
+	background-color: rgba(255,255,255,0.95);
+	z-index: 50;
+	user-select: none;
+}
+
+#app-content div .bar .column {
+	display: inline-block;
+	vertical-align: middle;
+}
+
+#app-content div .bar .column.progress {
+	width:75%;
+	height:20px;
+}
+
+#app-content div .bar .column.title {
+	min-width: 50px;
+
+}
+
+#app-content div .bar .column.main {
+	width:65%;
+	min-width: 320px;
+	margin:4px;
+}
+
+#app-navigation+#app-content div .bar .column.main {
+	display: block;
+}
+
+.viewer-mode #app-navigation+#app-content {
+	display: inline-block;
+}
+
+#app-content div .bar .column.action {
+	width:30%;
+	min-width: 250px;
+	margin:4px;
+}
+
+#app-content div .bar button {
+	width:80px;
+	height:25px;
+	margin:0;
+	padding:0;
 }

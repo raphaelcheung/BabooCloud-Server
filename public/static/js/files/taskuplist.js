@@ -150,6 +150,13 @@
 
                 self._refreshProgress(taskItem, upload.getStatus(), parseInt(percentage));
 
+
+                //更新总进度条
+                var stats = self._uploader.getStats();
+                var total = stats.queueNum + stats.progressNum + stats.successNum;
+                var val = (stats.successNum * 100 / total).toFixed(2);
+                self._showTotalProgress(val);
+
                 desItem.toggleClass('error', false);
 
             });
@@ -187,6 +194,8 @@
                 taskItem.remove();
 
             });
+
+            this._showTotalProgress();
 		},
 
         _refreshProgress: function(taskItem, status, val){
@@ -221,6 +230,17 @@
                 progress.progressbar({value: val});
             }
             progress.toggleClass('disabled', false);
+        },
+
+        _showTotalProgress: function(val){
+            var progress = $('#totalprogress');
+            if (val != null){
+                progress.progressbar({value: val});
+                progress.toggleClass('disabled', false);
+            }else{
+                progress.progressbar({value: 0});
+                progress.toggleClass('disabled', true);
+            }
         },
 
         _disableProgress: function(taskItem){

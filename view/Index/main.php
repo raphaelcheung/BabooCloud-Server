@@ -235,6 +235,23 @@
             <p></p>
         </div>
 
+        <div class="bar">
+            <div class="column main">
+                <div class="column title">总进度 </div>
+                <div id="totalprogress" class="column progress"></div>
+            </div>
+            <div class="column action">
+                <button type="button" id="asdf" >全部开始</button>
+                <button type="button" id="asdf" >
+                    <span>全部暂停</span>
+                </button>
+                <button type="button" id="asdf" >
+                    <span>全部取消</span>
+                </button>
+            </div>
+
+        </div>
+
         <table id="taskuploadtable">
             <thead>
                 <tr>

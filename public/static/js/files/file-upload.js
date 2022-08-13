@@ -1475,7 +1475,7 @@ OC.Uploader_.prototype = _.extend({
 		}
 
 		this.uploadParams = {
-			auto: true,
+			auto: false,
 			swf: './Uploader.swf',
 			server: '/task/upload',
 			resize: false,
@@ -1752,6 +1752,10 @@ OC.Uploader_.prototype = _.extend({
 		});
 
 		return this.uploadParams;
+	},
+
+	getStats: function(){
+		return this._webuploader.getStats();
 	},
 
 	setToken: function(token) {
