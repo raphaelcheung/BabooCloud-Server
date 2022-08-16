@@ -238,16 +238,12 @@
         <div class="bar">
             <div class="column main">
                 <div class="column title">总进度 </div>
-                <div id="totalprogress" class="column progress"></div>
+                <div id="totalprogress" class="column progress"><div class="label"></div></div>
             </div>
             <div class="column action">
-                <button type="button" id="asdf" >全部开始</button>
-                <button type="button" id="asdf" >
-                    <span>全部暂停</span>
-                </button>
-                <button type="button" id="asdf" >
-                    <span>全部取消</span>
-                </button>
+                <button type="button" id="btnStartAll" >全部开始</button>
+                <button type="button" id="btnPauseAll" >全部暂停</button>
+                <button type="button" id="btnCancelAll" >全部取消</button>
             </div>
 
         </div>

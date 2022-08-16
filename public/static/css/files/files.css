@@ -814,7 +814,7 @@ html.ie8 .column-mtime .selectedActions {
 
 }
 
-#taskprogress {
+#taskprogress, #totalprogress {
 	position:relative;
 
 	width: 100%;
@@ -823,7 +823,8 @@ html.ie8 .column-mtime .selectedActions {
 	text-align: center;
 }
 
-#taskprogress .ui-progressbar-value.ui-widget-header.ui-corner-left {
+#taskprogress .ui-progressbar-value.ui-widget-header.ui-corner-left,
+#totalprogress .ui-progressbar-value.ui-widget-header.ui-corner-left {
     height: 100%;
     top: 0px;
     left: 0px;
@@ -831,6 +832,11 @@ html.ie8 .column-mtime .selectedActions {
     overflow: hidden;
 
 	background: #0e4d88/*{bgColorHeader}*/ ;
+}
+
+#taskprogress.disabled .ui-progressbar-value.ui-widget-header.ui-corner-left,
+#totalprogress.disabled .ui-progressbar-value.ui-widget-header.ui-corner-left {
+	background: #cccccc/*{bgColorHeader}*/ ;
 }
 
 #taskprogress .label {
@@ -1264,3 +1270,4 @@ html.ie8 #controls .button.new {
 	right: initial;
 	left: 15px !important;
 }
+

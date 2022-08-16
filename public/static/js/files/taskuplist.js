@@ -56,6 +56,7 @@
             console.log('taskup: inited');
 			var self = this;
             this._uploader = OC.UploaderInstance;
+            console.log(this._uploader);
 			options = options || {};
 			if (this.initialized) {
 				return;
@@ -125,6 +126,10 @@
                 self.updateAction(taskItem, upload.getStatus());
             });
 
+            this._uploader.on('add', function(upload){
+                self._refreshTotalProgress();
+            });
+
             this._uploader.on('error', function(upload){
                 console.log('error');
                 console.log(upload.getStatusText());
@@ -149,13 +154,6 @@
                 desItem.text('文件上传中...' + percentage + '%');
 
                 self._refreshProgress(taskItem, upload.getStatus(), parseInt(percentage));
-
-
-                //更新总进度条
-                var stats = self._uploader.getStats();
-                var total = stats.queueNum + stats.progressNum + stats.successNum;
-                var val = (stats.successNum * 100 / total).toFixed(2);
-                self._showTotalProgress(val);
 
                 desItem.toggleClass('error', false);
 
@@ -187,15 +185,47 @@
 
             this._uploader.on('remove', function(upload){
                 console.log('remove');
-
                 var taskItem = self.$upTaskList.find('#taskRow_' + upload.getId());
-
-
                 taskItem.remove();
-
+                self._refreshTotalProgress();
             });
 
-            this._showTotalProgress();
+            this._uploader.on('start', function(){
+                self._refreshTotalProgress();
+            });
+
+            this._uploader.on('complete', function(upload){
+                self._refreshTotalProgress();
+            });
+            
+            $('#btnStartAll').click(function(){
+                console.log('_onClickStartAll');
+                var files = self._uploader.getFiles('inited', 'error', 'interrupt');
+                console.log(files);
+               
+                _.each(files, function(file){
+                    self._uploader.startUploadByFile(file);
+                });
+            });
+
+            $('#btnPauseAll').click(function(){
+                console.log(self._uploader);
+                var files = self._uploader.getFiles('queued', 'progress');
+                _.each(files, function(file){
+                    self._uploader.pauseUploadByFile(file);
+                });
+            });
+
+            $('#btnCancelAll').click(function(){
+                console.log(self._uploader);
+
+                var files = self._uploader.getFiles('inited', 'queued', 'progress', 'complete', 'error', 'interrupt', 'invalid');
+                _.each(files, function(file){
+                    self._uploader.cancelUploadByFile(file);
+                });
+            });
+
+            this._refreshTotalProgress();
 		},
 
         _refreshProgress: function(taskItem, status, val){
@@ -223,6 +253,21 @@
             }
         },
 
+        _refreshTotalProgress: function() {
+            //更新总进度条
+            var stats = this._uploader.getStats();
+            console.log(stats);
+            var total = stats.queueNum + stats.progressNum + stats.successNum;
+
+            if (total <= 0){
+                this._showTotalProgress();
+            }else{
+                var val = (stats.successNum * 100 / total).toFixed(2);
+                console.log(val);
+                this._showTotalProgress(val);
+            }
+        },
+
         _showProgress: function(taskItem, val){
             console.log('_showProgress');
             var progress = taskItem.find('#taskprogress');
@@ -234,12 +279,21 @@
 
         _showTotalProgress: function(val){
             var progress = $('#totalprogress');
+            var label = $('#totalprogress .label');
+        
             if (val != null){
+                val = parseInt(val);
+
                 progress.progressbar({value: val});
                 progress.toggleClass('disabled', false);
+
+                label.text(val + ' %');
             }else{
-                progress.progressbar({value: 0});
+                progress.progressbar({value: false});
                 progress.toggleClass('disabled', true);
+                //progress.text('0.0 %');
+                label.text( '0.0 %');
+
             }
         },
 
@@ -552,6 +606,8 @@
             });
 
             console.log(taskData.status);
+
+
 
             this._refreshProgress(tr, taskData.status, 0);
             this._refreshStatus(tr, taskData.status, taskData.statustext)

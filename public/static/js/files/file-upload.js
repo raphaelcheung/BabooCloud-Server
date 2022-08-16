@@ -1480,11 +1480,11 @@ OC.Uploader_.prototype = _.extend({
 			server: '/task/upload',
 			resize: false,
 			chunked: true,				//开启分片上传
-			chunkRetry: 2,
+			chunkRetry: 0,
 			// 分片大小
 			chunkSize: options.maxChunkSize ? options.maxChunkSize : 5 * 1024 * 1024,	
 			
-			threads: 1,
+			threads: 3,
 			fileNumLimit: 10000, 			// 限制文件上传个数
 			methods: 'POST',
 			duplicate: false,			// 去重， 根据文件名字、文件大小和最后修改时间来生成hash Key
@@ -1515,7 +1515,7 @@ OC.Uploader_.prototype = _.extend({
 					type: "GET",
 					datatype: "json",
 					headers: {logintoken: self._loginToken},
-					async: false,
+					async: true,
 					cache: false,
 					data: {},
 					success: function(data, result, response){
@@ -1577,7 +1577,7 @@ OC.Uploader_.prototype = _.extend({
 						type: "POST",
 						datatype: "json",
 						headers: {logintoken: self._loginToken},
-						async: false,
+						async: true,
 						cache: false,
 						data: {
 							from: upload.getOriginalFullPath(),
@@ -1643,6 +1643,11 @@ OC.Uploader_.prototype = _.extend({
 			});
 
 			self.trigger('add', upload);
+		});
+
+		this._webuploader.on('startUpload', function() {
+			console.log('startUpload');
+			self.trigger('start');
 		});
 		
 
@@ -1754,6 +1759,10 @@ OC.Uploader_.prototype = _.extend({
 		return this.uploadParams;
 	},
 
+	getFiles: function(){
+		return this._webuploader.getFiles.apply(this._webuploader, arguments);
+	},
+
 	getStats: function(){
 		return this._webuploader.getStats();
 	},
@@ -1780,6 +1789,11 @@ OC.Uploader_.prototype = _.extend({
 		this._webuploader.stop(upload.getFile(), true);
 	},
 
+	pauseUploadByFile: function(file) {
+		var upload = this._uploads_file[file.id];
+		this._webuploader.stop(upload.getFile(), true);
+	},
+
 	pauseUploads: function() {
 		var self = this;
 		_.each(this._uploads, function(upload) {
@@ -1792,22 +1806,24 @@ OC.Uploader_.prototype = _.extend({
 		this._webuploader.upload(upload.getFile());
 	},
 
+	startUploadByFile: function(file) {
+		var upload = this._uploads_file[file.id];
+		this._webuploader.upload(upload.getFile());
+	},
+
 	startUploads: function() {
-		var self = this;
-		_.each(this._uploads, function(upload) {
-			self._webuploader.upload(upload.getFile());
-		});
+		this._webuploader.upload();
 	},
 
 
 	cancelUpload: function(id) {
-		console.log('cancelUpload：' + id);
-
 		var upload = this._uploads[id];
-
-
 		this._webuploader.cancelFile(upload.getFile());
+	},
 
+	cancelUploadByFile: function(file) {
+		var upload = this._uploads_file[file.id];
+		this._webuploader.cancelFile(upload.getFile());
 	},
 
 	cancelUploads: function() {
