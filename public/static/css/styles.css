@@ -1204,9 +1204,13 @@ div .error {
 	z-index: 50;
 
 	color: black;
-	text-shadow: white 2px 2px 2px;
+	text-shadow: #ddd 1px 1px 0px,
+		#ddd -1px -1px 0px,
+		#ddd -1px 0px 0px,
+		#ddd 1px 0px 0px,
+		#ddd 0px -1px 0px;
 }
 
 #totalprogress.disabled .label {
-	color: #aaa;
+	color: #888;
 }

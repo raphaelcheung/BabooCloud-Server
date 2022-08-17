@@ -282,7 +282,7 @@
             var label = $('#totalprogress .label');
         
             if (val != null){
-                val = parseInt(val);
+                val = parseFloat(val);
 
                 progress.progressbar({value: val});
                 progress.toggleClass('disabled', false);
